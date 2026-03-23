@@ -394,7 +394,7 @@ def build_ai_config_tab(self):
     max_tokens_slider = ctk.CTkSlider(
         self.ai_config_tab, 
         from_=0, 
-        to=262144, 
+        to=102400, 
         number_of_steps=100, 
         command=update_max_tokens_label,
         variable=self.max_tokens_var
@@ -796,4 +796,3 @@ def save_config_btn(self):
         self.log("配置已保存。")
     else:
         messagebox.showerror("错误", "保存配置失败。")
-
