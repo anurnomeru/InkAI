@@ -184,8 +184,8 @@ class NovelGeneratorGUI:
 
     # ----------------- 閫氱敤杈呭姪鍑芥暟 -----------------
     def show_tooltip(self, key: str):
-        info_text = tooltips.get(key, "鏆傛棤璇存槑")
-        messagebox.showinfo("参数璇存槑", info_text)
+        info_text = tooltips.get(key, "暂无说明")
+        messagebox.showinfo("参数说明", info_text)
 
     def safe_get_int(self, var, default=1):
         try:
