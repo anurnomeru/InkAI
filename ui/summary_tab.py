@@ -47,7 +47,7 @@ def load_global_summary(self):
     content = read_file(filename)
     self.summary_text.delete("0.0", "end")
     self.summary_text.insert("0.0", content)
-    self.log("已加载 global_summary.txt 鍒扮紪杈戝尯")
+    self.log("已加载 global_summary.txt 到编辑区")
 
 def save_global_summary(self):
     filepath = self.filepath_var.get().strip()
@@ -58,7 +58,7 @@ def save_global_summary(self):
     filename = os.path.join(filepath, "global_summary.txt")
     clear_file_content(filename)
     save_string_to_txt(content, filename)
-    self.log("已保存樺 global_summary.txt 鐨勪慨鏀广€")
+    self.log("已保存对 global_summary.txt 的修改")
 
 
 

@@ -46,7 +46,7 @@ def load_novel_architecture(self):
     content = read_file(filename)
     self.setting_text.delete("0.0", "end")
     self.setting_text.insert("0.0", content)
-    self.log("已加载 Novel_architecture.txt 鍐呭鍒扮紪杈戝尯")
+    self.log("已加载 Novel_architecture.txt 到编辑区")
 
 def save_novel_architecture(self):
     filepath = self.filepath_var.get().strip()
@@ -57,7 +57,7 @@ def save_novel_architecture(self):
     filename = os.path.join(filepath, "Novel_architecture.txt")
     clear_file_content(filename)
     save_string_to_txt(content, filename)
-    self.log("已保存樺 Novel_architecture.txt 鐨勪慨鏀广€")
+    self.log("已保存对 Novel_architecture.txt 的修改")
 
 
 
