@@ -207,7 +207,7 @@ def _open_find_dialog(widget: tk.Widget, event=None):
         return "break"
     except Exception:
         return "break"
-\ndef _find_next(widget: tk.Widget, event=None):
+def _find_next(widget: tk.Widget, event=None):
     try:
         term: str = getattr(widget, "_find_term", "")
         case: bool = getattr(widget, "_find_case", False)
