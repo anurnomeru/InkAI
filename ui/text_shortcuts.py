@@ -145,23 +145,69 @@ def _redo(widget: tk.Widget, event=None):
         return "break"
     except Exception:
         return "break"
-
-
-def _open_find_dialog(widget: tk.Widget, event=None):
-    try:
-        _ensure_tags(widget)
-        dialog = ctk.CTkInputDialog(text=t("输入要查找的内容:"), title=t("查找"))
-        term = dialog.get_input()
-        if not term:
-            return "break"
-        setattr(widget, "_find_term", term)
-        setattr(widget, "_find_case", False)
-        return _find_next(widget)
-    except Exception:
-        return "break"
-
-
-def _find_next(widget: tk.Widget, event=None):
+
+def _open_find_dialog(widget: tk.Widget, event=None):
+    try:
+        _ensure_tags(widget)
+        root = widget.winfo_toplevel()
+        dlg = ctk.CTkToplevel(root)
+        dlg.title(t("查找"))
+        dlg.geometry("360x130")
+        dlg.transient(root)
+        dlg.grab_set()
+
+        frame = ctk.CTkFrame(dlg)
+        frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        entry = ctk.CTkEntry(frame)
+        entry.pack(fill="x", padx=2, pady=(0,6))
+        last_term = getattr(widget, "_find_term", "")
+        if last_term:
+            entry.insert(0, last_term)
+        entry.focus_set()
+
+        opts = ctk.CTkFrame(frame)
+        opts.pack(fill="x", padx=2, pady=2)
+
+        case_var = tk.BooleanVar(value=getattr(widget, "_find_case", False))
+        case_chk = ctk.CTkCheckBox(opts, text=t("区分大小写"), variable=case_var)
+        case_chk.pack(side="left")
+
+        def do_prev():
+            setattr(widget, "_find_term", entry.get())
+            setattr(widget, "_find_case", bool(case_var.get()))
+            _find_prev(widget)
+
+        def do_next():
+            setattr(widget, "_find_term", entry.get())
+            setattr(widget, "_find_case", bool(case_var.get()))
+            _find_next(widget)
+
+        btn_prev = ctk.CTkButton(opts, text=t("上一条"), width=80, command=do_prev)
+        btn_prev.pack(side="right", padx=(6,0))
+        btn_next = ctk.CTkButton(opts, text=t("下一条"), width=80, command=do_next)
+        btn_next.pack(side="right")
+
+        def on_return(e):
+            do_next(); return "break"
+        def on_shift_return(e):
+            do_prev(); return "break"
+        def on_esc(e):
+            try:
+                dlg.grab_release()
+            except Exception:
+                pass
+            dlg.destroy(); return "break"
+        entry.bind("<Return>", on_return)
+        entry.bind("<Shift-Return>", on_shift_return)
+        dlg.bind("<Escape>", on_esc)
+
+        if last_term:
+            do_next()
+        return "break"
+    except Exception:
+        return "break"
+\ndef _find_next(widget: tk.Widget, event=None):
     try:
         term: str = getattr(widget, "_find_term", "")
         case: bool = getattr(widget, "_find_case", False)
