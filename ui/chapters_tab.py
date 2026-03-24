@@ -62,7 +62,7 @@ def refresh_chapters_list(self):
     filepath = self.filepath_var.get().strip()
     chapters_dir = os.path.join(filepath, "chapters")
     if not os.path.exists(chapters_dir):
-        self.safe_log("尚未找到 chapters 文件夹，紝请先生成章节鎴栨鏌ヤ繚瀛樿矾寰勩€")
+        self.safe_log("尚未找到 chapters 文件夹，请先生成章节或检查保存路径。")
         self.chapter_select_menu.configure(values=[])
         return
 
