@@ -127,7 +127,7 @@ def build_novel_params_area(self, start_row=1):
 
     # 6) 鍐呭鎸囧
 
-    row_user_guide = 5
+    row_user_guide = 6
 
     create_label_with_help_for_novel_params(self, parent=self.params_frame, label_text=t("内容指导:"), tooltip_key="user_guidance", row=row_user_guide, column=0, font=("Microsoft YaHei", 12), sticky="ne")
 
@@ -149,7 +149,7 @@ def build_novel_params_area(self, start_row=1):
 
     # 7) €夊厓绱狅細鏍稿績浜虹墿/关键道具/绌洪棿鍧愭爣/鏃堕棿鍘嬪姏
 
-    row_idx = 6
+    row_idx = 7
 
     create_label_with_help_for_novel_params(self, parent=self.params_frame, label_text=t("核心人物:"), tooltip_key="characters_involved", row=row_idx, column=0, font=("Microsoft YaHei", 12))
 
@@ -310,6 +310,7 @@ def create_label_with_help_for_novel_params(self, parent, label_text, tooltip_ke
     btn.pack(side="left", padx=3)
 
     return frame
+
 
 
 
