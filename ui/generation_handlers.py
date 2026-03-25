@@ -1,4 +1,4 @@
-# ui/generation_handlers.py
+﻿# ui/generation_handlers.py
 # -*- coding: utf-8 -*-
 import os
 import threading
@@ -181,24 +181,22 @@ def generate_chapter_draft_ui(self):
                 max_tokens=max_tokens,
                 timeout=timeout_val
             )
-            # ???????????>1 ?????? _drafts ???
+            # 并发多版本草稿（当草稿版本数>1时，直接并发生成到 _drafts 并返回）
             variant_count = 1
             try:
                 variant_count = int(self.draft_variants_var.get().strip()) if hasattr(self, 'draft_variants_var') else 1
             except Exception:
                 variant_count = 1
             if variant_count and variant_count > 1:
-                self.safe_log(f"?????? {variant_count} ?????...")
+                self.safe_log(f"开始并发生成 {variant_count} 个草稿版本...")
                 chapters_dir = os.path.join(filepath, "chapters")
                 drafts_dir = os.path.join(chapters_dir, "_drafts")
                 os.makedirs(drafts_dir, exist_ok=True)
                 threads = []
-                from novel_generator.chapter import generate_chapter_draft
-                
                 def worker(k:int):
                     try:
                         target_path = os.path.join(drafts_dir, f"chapter_{chap_num}_{k}.txt")
-                        draft_text_k = generate_chapter_draft(
+                        _ = generate_chapter_draft(
                             api_key=api_key,
                             base_url=base_url,
                             model_name=model_name,
@@ -222,26 +220,20 @@ def generate_chapter_draft_ui(self):
                             custom_prompt_text=prompt_text,
                             target_file=target_path
                         )
-                        self.safe_log(f"? ????{k} ?????{os.path.basename(target_path)}")
                     except Exception:
-                        self.safe_log(f"?? ????{k} ?????")
-                    finally:
-                        try:
-                            self.master.after(0, self.refresh_draft_variants_list)
-                        except Exception:
-                            pass
-                
+                        pass
                 for k in range(1, variant_count+1):
-                    import threading
                     t = threading.Thread(target=worker, args=(k,), daemon=True)
                     threads.append(t)
                     t.start()
                 for t in threads:
                     t.join()
-                self.safe_log("???????????????????????")
+                try:
+                    self.master.after(0, self.refresh_draft_variants_list)
+                except Exception:
+                    pass
                 self.enable_button_safe(self.btn_generate_chapter)
                 return
-
             # 弹出可编辑提示词对话框，等待用户确认或取消
             result = {"prompt": None}
             event = threading.Event()
@@ -856,3 +848,4 @@ def show_plot_arcs_ui(self):
     text_area.pack(fill="both", expand=True, padx=10, pady=10)
     text_area.insert("0.0", arcs_text)
     text_area.configure(state="disabled")
+
