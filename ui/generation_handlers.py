@@ -181,6 +181,66 @@ def generate_chapter_draft_ui(self):
                 max_tokens=max_tokens,
                 timeout=timeout_val
             )
+            # ???????????>1 ?????? _drafts ???
+            variant_count = 1
+            try:
+                variant_count = int(self.draft_variants_var.get().strip()) if hasattr(self, 'draft_variants_var') else 1
+            except Exception:
+                variant_count = 1
+            if variant_count and variant_count > 1:
+                self.safe_log(f"?????? {variant_count} ?????...")
+                chapters_dir = os.path.join(filepath, "chapters")
+                drafts_dir = os.path.join(chapters_dir, "_drafts")
+                os.makedirs(drafts_dir, exist_ok=True)
+                threads = []
+                from novel_generator.chapter import generate_chapter_draft
+                
+                def worker(k:int):
+                    try:
+                        target_path = os.path.join(drafts_dir, f"chapter_{chap_num}_{k}.txt")
+                        draft_text_k = generate_chapter_draft(
+                            api_key=api_key,
+                            base_url=base_url,
+                            model_name=model_name,
+                            filepath=filepath,
+                            novel_number=chap_num,
+                            word_number=word_number,
+                            temperature=temperature,
+                            user_guidance=user_guidance,
+                            characters_involved=char_inv,
+                            key_items=key_items,
+                            scene_location=scene_loc,
+                            time_constraint=time_constr,
+                            embedding_api_key=embedding_api_key,
+                            embedding_url=embedding_url,
+                            embedding_interface_format=embedding_interface_format,
+                            embedding_model_name=embedding_model_name,
+                            embedding_retrieval_k=embedding_k,
+                            interface_format=interface_format,
+                            max_tokens=max_tokens,
+                            timeout=timeout_val,
+                            custom_prompt_text=prompt_text,
+                            target_file=target_path
+                        )
+                        self.safe_log(f"? ????{k} ?????{os.path.basename(target_path)}")
+                    except Exception:
+                        self.safe_log(f"?? ????{k} ?????")
+                    finally:
+                        try:
+                            self.master.after(0, self.refresh_draft_variants_list)
+                        except Exception:
+                            pass
+                
+                for k in range(1, variant_count+1):
+                    import threading
+                    t = threading.Thread(target=worker, args=(k,), daemon=True)
+                    threads.append(t)
+                    t.start()
+                for t in threads:
+                    t.join()
+                self.safe_log("???????????????????????")
+                self.enable_button_safe(self.btn_generate_chapter)
+                return
 
             # 弹出可编辑提示词对话框，等待用户确认或取消
             result = {"prompt": None}

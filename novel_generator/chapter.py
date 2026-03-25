@@ -1,4 +1,4 @@
-# novel_generator/chapter.py
+﻿# novel_generator/chapter.py
 # -*- coding: utf-8 -*-
 """
 章节草稿生成及获取历史章节文本、当前章节摘要等
@@ -538,7 +538,8 @@ def generate_chapter_draft(
     interface_format: str = "openai",
     max_tokens: int = 2048,
     timeout: int = 600,
-    custom_prompt_text: str = None
+    custom_prompt_text: str = None,
+    target_file: str | None = None
 ) -> str:
     """
     生成章节草稿，支持自定义提示词
@@ -585,7 +586,11 @@ def generate_chapter_draft(
     chapter_content = invoke_with_cleaning(llm_adapter, prompt_text)
     if not chapter_content.strip():
         logging.warning("Generated chapter draft is empty.")
-    chapter_file = os.path.join(chapters_dir, f"chapter_{novel_number}.txt")
+    if target_file:
+        os.makedirs(os.path.dirname(target_file), exist_ok=True)
+        chapter_file = target_file
+    else:
+        chapter_file = os.path.join(chapters_dir, f"chapter_{novel_number}.txt")
     clear_file_content(chapter_file)
     save_string_to_txt(chapter_content, chapter_file)
     logging.info(f"[Draft] Chapter {novel_number} generated as a draft.")
