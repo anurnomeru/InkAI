@@ -121,8 +121,10 @@ def build_novel_params_area(self, start_row=1):
 
     # 5.1) ?????
     row_draft_variants = row_chap_num + 1
-    create_label_with_help_for_novel_params(self, parent=self.params_frame, label_text="Draft Variant Count", tooltip_key="chapter_num", row=row_draft_variants, column=0, font=("Microsoft YaHei", 12))
-    draft_variants_entry = ctk.CTkEntry(self.params_frame, textvariable=self.draft_variants_var, width=80, font=("Microsoft YaHei", 12))
+    # Draft Variant Count label + input (raw English, no i18n/font)
+    label_draft_variants = ctk.CTkLabel(self.params_frame, text="Draft Variant Count")
+    label_draft_variants.grid(row=row_draft_variants, column=0, padx=5, pady=5, sticky="e")
+    draft_variants_entry = ctk.CTkEntry(self.params_frame, textvariable=self.draft_variants_var, width=80)
     draft_variants_entry.grid(row=row_draft_variants, column=1, padx=5, pady=5, sticky="w")
 
     # 6) 鍐呭鎸囧
