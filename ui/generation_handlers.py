@@ -159,6 +159,7 @@ def generate_chapter_draft_ui(self):
             self.safe_log(f"生成第{chap_num}章草稿：准备生成请求提示词...")
 
             # 调用新添加的 build_chapter_prompt 函数构造初始提示词
+            self.safe_log(f"[Draft LLM] name={self.prompt_draft_llm_var.get()} model={model_name} base={base_url} temp={temperature} max_tokens={max_tokens} timeout={timeout_val}")
             prompt_text = build_chapter_prompt(
                 api_key=api_key,
                 base_url=base_url,
