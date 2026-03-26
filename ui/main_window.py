@@ -180,15 +180,13 @@ class NovelGeneratorGUI:
 
         # PenBo 澧炲姞浠ｇ悊鍔熻兘鏀寔
 
-        proxy_url = self.loaded_config["proxy_setting"]["proxy_url"]
+        proxy_url = (self.loaded_config.get("proxy_setting", {}) or {}).get("proxy_url", "")
 
-        proxy_port = self.loaded_config["proxy_setting"]["proxy_port"]
+        proxy_port = (self.loaded_config.get("proxy_setting", {}) or {}).get("proxy_port", "")
 
-        if self.loaded_config["proxy_setting"]["enabled"]:
-
-            os.environ['HTTP_PROXY'] = f"http://{proxy_url}:{proxy_port}"
-
-            os.environ['HTTPS_PROXY'] = f"http://{proxy_url}:{proxy_port}"
+        if (self.loaded_config.get("proxy_setting", {}) or {}).get("enabled", False):
+            os.environ["HTTP_PROXY"] = f"http://{proxy_url}:{proxy_port}"
+            os.environ["HTTPS_PROXY"] = f"http://{proxy_url}:{proxy_port}"
 
         else:
 
@@ -1095,21 +1093,18 @@ class NovelGeneratorGUI:
 
         # PenBo 澧炲姞浠ｇ悊鍔熻兘鏀寔
 
-        proxy_url = self.loaded_config["proxy_setting"]["proxy_url"]
+        proxy_url = (self.loaded_config.get("proxy_setting", {}) or {}).get("proxy_url", "")
 
-        proxy_port = self.loaded_config["proxy_setting"]["proxy_port"]
+        proxy_port = (self.loaded_config.get("proxy_setting", {}) or {}).get("proxy_port", "")
 
-        if self.loaded_config["proxy_setting"]["enabled"]:
-
-            os.environ['HTTP_PROXY'] = f"http://{proxy_url}:{proxy_port}"
-
-            os.environ['HTTPS_PROXY'] = f"http://{proxy_url}:{proxy_port}"
+        if (self.loaded_config.get("proxy_setting", {}) or {}).get("enabled", False):
+            os.environ["HTTPS_PROXY"] = f"http://{proxy_url}:{proxy_port}"
 
         else:
 
-            os.environ.pop('HTTP_PROXY', None)  
+            os.environ.pop("HTTP_PROXY", None)
 
-            os.environ.pop('HTTPS_PROXY', None)
+            os.environ.pop("HTTPS_PROXY", None)
 
 
 
@@ -1906,6 +1901,7 @@ class NovelGeneratorGUI:
             self.master.after(0, _set_latest_chapter_on_start)
         except Exception:
             pass
+
 
 
 
