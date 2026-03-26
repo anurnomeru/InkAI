@@ -384,6 +384,40 @@ class NovelGeneratorGUI:
 
         build_other_settings_tab(self)
 
+        try:
+            def _on_chap_change(*args):
+                try:
+                    self.refresh_draft_variants_list()
+                    filepath = self.filepath_var.get().strip()
+                    chap = str(self.chapter_num_var.get()).strip()
+                    if not (filepath and chap):
+                        return
+                    drafts_dir = os.path.join(filepath, "chapters", "_drafts")
+                    chosen = None
+                    if os.path.exists(drafts_dir):
+                        prefix = "chapter_" + chap + "_"
+                        files = [f for f in os.listdir(drafts_dir) if f.startswith(prefix) and f.endswith(".txt")]
+                        files.sort()
+                        if files:
+                            chosen = files[-1]
+                    if chosen:
+                        self.draft_variant_select_var.set(chosen)
+                        if hasattr(self, "on_draft_variant_selected"):
+                            self.on_draft_variant_selected(chosen)
+                    else:
+                        main_path = os.path.join(filepath, "chapters", "chapter_" + chap + ".txt")
+                        if os.path.exists(main_path) and hasattr(self, "chapter_result"):
+                            text = read_file(main_path)
+                            self.chapter_result.delete("0.0","end")
+                            self.chapter_result.insert("0.0", text)
+                            self.chapter_result.see("end")
+                        elif hasattr(self, "chapter_result"):
+                            self.chapter_result.delete("0.0","end")
+                except Exception:
+                    pass
+            self.chapter_num_var.trace_add("write", lambda *a: self.master.after(0, _on_chap_change))
+        except Exception:
+            pass
 
 
 
@@ -1210,91 +1244,6 @@ class NovelGeneratorGUI:
             self.webdav_url_var = ctk.StringVar(value=op.get("webdav_url", ""))
 
             self.webdav_username_var = ctk.StringVar(value=op.get("webdav_username", ""))
-
-            self.webdav_password_var = ctk.StringVar(value=op.get("webdav_password", ""))
-
-
-
-        else:
-
-            self.topic_default = ""
-
-            self.genre_var = ctk.StringVar(value="鐜勫够")
-
-            self.num_chapters_var = ctk.StringVar(value="1")
-
-            self.word_number_var = ctk.StringVar(value="10000")
-
-            self.filepath_var = ctk.StringVar(value="")
-
-            self.chapter_num_var = ctk.StringVar(value="1")
-
-            self.characters_involved_var = ctk.StringVar(value="")
-
-            self.key_items_var = ctk.StringVar(value="")
-
-            self.scene_location_var = ctk.StringVar(value="")
-
-            self.time_constraint_var = ctk.StringVar(value="")
-
-            self.user_guidance_default = ""
-
-
-            self.draft_variants_var = ctk.StringVar(value='3')
-
-        # --------------- 鏁翠綋Tab甯冨眬 ---------------
-
-        self.tabview = ctk.CTkTabview(self.master)
-
-        self.tabview.pack(fill="both", expand=True)
-
-
-
-        # 鍒涘缓鍚勪釜标签页?
-
-        build_main_tab(self)
-
-        build_config_tabview(self)
-
-        build_novel_params_area(self, start_row=1)
-
-        build_optional_buttons_area(self, start_row=2)
-
-        build_setting_tab(self)
-
-        build_directory_tab(self)
-
-        build_character_tab(self)
-
-        build_summary_tab(self)
-
-        build_chapters_tab(self)
-
-
-        # 初次打开：设置为最新章节（只看主文件 chapter_<n>.txt）
-        try:
-            def _apply_latest_chapter_on_start():
-                try:
-                    fp = (self.filepath_var.get() or "").strip()
-                    chap_dir = os.path.join(fp, "chapters")
-                    latest = 0
-                    if os.path.isdir(chap_dir):
-                        for name in os.listdir(chap_dir):
-                            if name.startswith("chapter_") and name.endswith(".txt") and name.count("_") == 1:
-                                num = name.split("_")[1].split(".")[0]
-                                if num.isdigit():
-                                    latest = max(latest, int(num))
-                    if latest > 0:
-                        self.chapter_num_var.set(str(latest))
-                        if hasattr(self, "refresh_draft_variants_list"):
-                            self.refresh_draft_variants_list()
-                except Exception:
-                    pass
-            self.master.after(0, _apply_latest_chapter_on_start)
-        except Exception:
-            pass
-
-        build_other_settings_tab(self)
         try:
             def _on_chap_change(*args):
                 try:
