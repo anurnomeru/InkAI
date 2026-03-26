@@ -48,7 +48,7 @@ def generate_novel_architecture_ui(self):
 
             topic = self.topic_text.get("0.0", "end").strip()
             genre = self.genre_var.get().strip()
-            num_chapters = self.safe_get_int(self.num_chapters_var, 10)
+            num_chapters = self.safe_get_int(self.num_chapters_var, 1)
             word_number = self.safe_get_int(self.word_number_var, 10000)
             # 获取内容指导
             user_guidance = self.user_guide_text.get("0.0", "end").strip()
@@ -89,7 +89,7 @@ def generate_chapter_blueprint_ui(self):
         self.disable_button_safe(self.btn_generate_directory)
         try:
 
-            number_of_chapters = self.safe_get_int(self.num_chapters_var, 10)
+            number_of_chapters = self.safe_get_int(self.num_chapters_var, 1)
 
             interface_format = self.loaded_config["llm_configs"][self.chapter_outline_llm_var.get()]["interface_format"]
             api_key = self.loaded_config["llm_configs"][self.chapter_outline_llm_var.get()]["api_key"]
@@ -859,6 +859,7 @@ def show_plot_arcs_ui(self):
     text_area.pack(fill="both", expand=True, padx=10, pady=10)
     text_area.insert("0.0", arcs_text)
     text_area.configure(state="disabled")
+
 
 
 

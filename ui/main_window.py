@@ -276,7 +276,7 @@ class NovelGeneratorGUI:
 
             self.genre_var = ctk.StringVar(value=op.get("genre", "鐜勫够"))
 
-            self.num_chapters_var = ctk.StringVar(value=str(op.get("num_chapters", 10)))
+            self.num_chapters_var = ctk.StringVar(value=str(op.get("num_chapters", 1)))
 
             self.word_number_var = ctk.StringVar(value=str(op.get("word_number", 10000)))
 
@@ -311,7 +311,7 @@ class NovelGeneratorGUI:
 
             self.genre_var = ctk.StringVar(value="鐜勫够")
 
-            self.num_chapters_var = ctk.StringVar(value="10")
+            self.num_chapters_var = ctk.StringVar(value="1")
 
             self.word_number_var = ctk.StringVar(value="10000")
 
@@ -1191,7 +1191,7 @@ class NovelGeneratorGUI:
 
             self.genre_var = ctk.StringVar(value=op.get("genre", "鐜勫够"))
 
-            self.num_chapters_var = ctk.StringVar(value=str(op.get("num_chapters", 10)))
+            self.num_chapters_var = ctk.StringVar(value=str(op.get("num_chapters", 1)))
 
             self.word_number_var = ctk.StringVar(value=str(op.get("word_number", 10000)))
 
@@ -1226,7 +1226,7 @@ class NovelGeneratorGUI:
 
             self.genre_var = ctk.StringVar(value="鐜勫够")
 
-            self.num_chapters_var = ctk.StringVar(value="10")
+            self.num_chapters_var = ctk.StringVar(value="1")
 
             self.word_number_var = ctk.StringVar(value="10000")
 
@@ -1906,4 +1906,5 @@ class NovelGeneratorGUI:
             self.master.after(0, _set_latest_chapter_on_start)
         except Exception:
             pass
+
 

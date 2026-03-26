@@ -182,8 +182,8 @@ def build_ai_config_tab(self):
         other_params = {
             "topic": self.topic_text.get("0.0", "end").strip(),
             "genre": self.genre_var.get(),
-            "num_chapters": self.safe_get_int(self.num_chapters_var, 10),
-            "word_number": self.safe_get_int(self.word_number_var, 3000),
+            "num_chapters": self.safe_get_int(self.num_chapters_var, 1),
+            "word_number": self.safe_get_int(self.word_number_var, 10000),
             "filepath": self.filepath_var.get(),
             "chapter_num": self.chapter_num_var.get(),
             "user_guidance": self.user_guide_text.get("0.0", "end").strip(),
@@ -725,8 +725,8 @@ def load_config_btn(self):
         self.topic_text.delete("0.0", "end")
         self.topic_text.insert("0.0", other_params.get("topic", ""))
         self.genre_var.set(other_params.get("genre", "玄幻"))
-        self.num_chapters_var.set(str(other_params.get("num_chapters", 10)))
-        self.word_number_var.set(str(other_params.get("word_number", 3000)))
+        self.num_chapters_var.set(str(other_params.get("num_chapters", 1)))
+        self.word_number_var.set(str(other_params.get("word_number", 10000)))
         self.filepath_var.set(other_params.get("filepath", ""))
         self.chapter_num_var.set(str(other_params.get("chapter_num", "1")))
         self.user_guide_text.delete("0.0", "end")
@@ -762,8 +762,8 @@ def save_config_btn(self):
     other_params = {
         "topic": self.topic_text.get("0.0", "end").strip(),
         "genre": self.genre_var.get(),
-        "num_chapters": self.safe_get_int(self.num_chapters_var, 10),
-        "word_number": self.safe_get_int(self.word_number_var, 3000),
+        "num_chapters": self.safe_get_int(self.num_chapters_var, 1),
+        "word_number": self.safe_get_int(self.word_number_var, 10000),
         "filepath": self.filepath_var.get(),
         "chapter_num": self.chapter_num_var.get(),
         "user_guidance": self.user_guide_text.get("0.0", "end").strip(),
@@ -796,4 +796,5 @@ def save_config_btn(self):
         self.log("配置已保存。")
     else:
         messagebox.showerror("错误", "保存配置失败。")
+
 
