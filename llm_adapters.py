@@ -1,4 +1,4 @@
-# llm_adapters.py
+﻿# llm_adapters.py
 # -*- coding: utf-8 -*-
 import logging
 from typing import Optional
@@ -403,26 +403,69 @@ def create_llm_adapter(
     """
     fmt = interface_format.strip().lower()
     if fmt == "deepseek":
-        return DeepSeekAdapter(api_key, base_url, model_name, max_tokens, temperature, timeout)
+        ret = DeepSeekAdapter(api_key, base_url, model_name, max_tokens, temperature, timeout)
+    if fmt == "deepseek":
+        ret = DeepSeekAdapter(api_key, base_url, model_name, max_tokens, temperature, timeout)
+        return _wrap_with_logging(ret)
     elif fmt == "openai":
-        return OpenAIAdapter(api_key, base_url, model_name, max_tokens, temperature, timeout)
+        ret = OpenAIAdapter(api_key, base_url, model_name, max_tokens, temperature, timeout)
+        return _wrap_with_logging(ret)
     elif fmt == "azure openai":
-        return AzureOpenAIAdapter(api_key, base_url, model_name, max_tokens, temperature, timeout)
+        ret = AzureOpenAIAdapter(api_key, base_url, model_name, max_tokens, temperature, timeout)
+        return _wrap_with_logging(ret)
     elif fmt == "azure ai":
-        return AzureAIAdapter(api_key, base_url, model_name, max_tokens, temperature, timeout)
+        ret = AzureAIAdapter(api_key, base_url, model_name, max_tokens, temperature, timeout)
+        return _wrap_with_logging(ret)
     elif fmt == "ollama":
-        return OllamaAdapter(api_key, base_url, model_name, max_tokens, temperature, timeout)
+        ret = OllamaAdapter(api_key, base_url, model_name, max_tokens, temperature, timeout)
+        return _wrap_with_logging(ret)
     elif fmt == "ml studio":
-        return MLStudioAdapter(api_key, base_url, model_name, max_tokens, temperature, timeout)
+        ret = MLStudioAdapter(api_key, base_url, model_name, max_tokens, temperature, timeout)
+        return _wrap_with_logging(ret)
     elif fmt == "gemini":
-        return GeminiAdapter(api_key, base_url, model_name, max_tokens, temperature, timeout)
+        ret = GeminiAdapter(api_key, base_url, model_name, max_tokens, temperature, timeout)
+        return _wrap_with_logging(ret)
     elif fmt == "阿里云百炼":
-        return OpenAIAdapter(api_key, base_url, model_name, max_tokens, temperature, timeout)
+        ret = OpenAIAdapter(api_key, base_url, model_name, max_tokens, temperature, timeout)
+        return _wrap_with_logging(ret)
     elif fmt == "火山引擎":
-        return VolcanoEngineAIAdapter(api_key, base_url, model_name, max_tokens, temperature, timeout)
+        ret = VolcanoEngineAIAdapter(api_key, base_url, model_name, max_tokens, temperature, timeout)
+        return _wrap_with_logging(ret)
     elif fmt == "硅基流动":
-        return SiliconFlowAdapter(api_key, base_url, model_name, max_tokens, temperature, timeout)
+        ret = SiliconFlowAdapter(api_key, base_url, model_name, max_tokens, temperature, timeout)
+        return _wrap_with_logging(ret)
     elif fmt == "grok":
-        return GrokAdapter(api_key, base_url, model_name, max_tokens, temperature, timeout)
-    else:
-        raise ValueError(f"Unknown interface_format: {interface_format}")
+        ret = GrokAdapter(api_key, base_url, model_name, max_tokens, temperature, timeout)
+        return _wrap_with_logging(ret)
+
+def _wrap_with_logging(adapter: BaseLLMAdapter) -> BaseLLMAdapter:
+    """Return a lightweight logging proxy so every .invoke() gets an intent line."""
+    class LoggingLLMAdapter(BaseLLMAdapter):
+        def __init__(self, inner):
+            self._inner = inner
+        def __getattr__(self, name):
+            return getattr(self._inner, name)
+        def invoke(self, prompt: str) -> str:
+            try:
+                import inspect, os
+                st = inspect.stack()
+                caller = st[1] if len(st) > 1 else None
+                caller_str = f"{os.path.basename(caller.filename)}::{caller.function}" if caller else "unknown"
+            except Exception:
+                caller_str = "unknown"
+            info = {
+                'adapter': type(self._inner).__name__,
+                'base_url': getattr(self._inner, 'base_url', None),
+                'model': getattr(self._inner, 'model_name', None),
+                'temperature': getattr(self._inner, 'temperature', None),
+                'max_tokens': getattr(self._inner, 'max_tokens', None),
+                'timeout': getattr(self._inner, 'timeout', None)
+            }
+            try:
+                import logging
+                logging.info(f"[LLM Intent] {caller_str} | {info}")
+                print("[LLM Intent]", caller_str, info)
+            except Exception:
+                pass
+            return self._inner.invoke(prompt)
+    return LoggingLLMAdapter(adapter)
