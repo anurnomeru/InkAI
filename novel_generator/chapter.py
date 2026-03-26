@@ -30,6 +30,27 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
+def _extract_tail_excerpt(text: str, min_paragraphs: int = 3, min_chars: int = 200) -> str:
+    """Return the ending excerpt of 	ext using paragraph boundaries (split by newline).
+    At least min_paragraphs paragraphs; if not reaching min_chars, keep adding paragraphs from the end.
+    Empty lines are ignored as paragraphs.
+    """
+    try:
+        if not text:
+            return ""
+        paras = [p.strip() for p in text.split("\n") if p.strip()]
+        acc = []
+        total = 0
+        i = len(paras) - 1
+        while i >= 0 and (len(acc) < min_paragraphs or total < min_chars):
+            acc.append(paras[i])
+            total += len(paras[i])
+            i -= 1
+        acc.reverse()
+        return "\n".join(acc)
+    except Exception:
+        return text[-200:] if len(text) >= 200 else text
+
 def get_last_n_chapters_text(chapters_dir: str, current_chapter_num: int, n: int = 3) -> list:
     """
     从目录 chapters_dir 中获取最近 n 章的文本内容，返回文本列表。
@@ -597,6 +618,7 @@ def generate_chapter_draft(
     save_string_to_txt(chapter_content, chapter_file)
     logging.info(f"[Draft] Chapter {novel_number} generated as a draft.")
     return chapter_content
+
 
 
 
