@@ -1,4 +1,4 @@
-# config_manager.py
+﻿# config_manager.py
 # -*- coding: utf-8 -*-
 import json
 import os
@@ -68,10 +68,10 @@ def create_config(config_file: str) -> dict:
     "other_params": {
         "topic": "",
         "genre": "",
-        "num_chapters": 0,
-        "word_number": 0,
+        "num_chapters": 1,
+        "word_number": 10000,
         "filepath": "",
-        "chapter_num": "120",
+        "chapter_num": "1",
         "user_guidance": "",
         "characters_involved": "",
         "key_items": "",

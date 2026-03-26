@@ -1,4 +1,4 @@
-{
+﻿{
     "last_interface_format": "OpenAI",
     "last_embedding_interface_format": "OpenAI",
     "llm_configs": {
@@ -42,10 +42,10 @@
     "other_params": {
         "topic": "",
         "genre": "",
-        "num_chapters": 0,
-        "word_number": 0,
+        "num_chapters": 1,
+        "word_number": 10000,
         "filepath": "",
-        "chapter_num": "120",
+        "chapter_num": "1",
         "user_guidance": "",
         "characters_involved": "",
         "key_items": "",
