@@ -114,7 +114,7 @@ class NovelGeneratorGUI:
 
         if self.loaded_config:
 
-            last_llm = next(iter(self.loaded_config["llm_configs"].values())).get("interface_format", "OpenAI")
+            last_llm = (next(iter(self.loaded_config.get("llm_configs", {}).values()), {"interface_format": "OpenAI"})).get("interface_format", "OpenAI")
 
 
 
@@ -150,7 +150,7 @@ class NovelGeneratorGUI:
 
         #     }
 
-        llm_conf = next(iter(self.loaded_config["llm_configs"].values()))
+        llm_conf = next(iter(self.loaded_config.get("llm_configs", {}).values()), {"api_key":"","base_url":"https://api.openai.com/v1","model_name":"gpt-4o-mini","temperature":0.7,"max_tokens":8192,"timeout":600,"interface_format":"OpenAI"})
 
         choose_configs = self.loaded_config.get("choose_configs", {})
 
@@ -1029,7 +1029,7 @@ class NovelGeneratorGUI:
 
         if self.loaded_config:
 
-            last_llm = next(iter(self.loaded_config["llm_configs"].values())).get("interface_format", "OpenAI")
+            last_llm = (next(iter(self.loaded_config.get("llm_configs", {}).values()), {"interface_format": "OpenAI"})).get("interface_format", "OpenAI")
 
 
 
@@ -1065,7 +1065,7 @@ class NovelGeneratorGUI:
 
         #     }
 
-        llm_conf = next(iter(self.loaded_config["llm_configs"].values()))
+        llm_conf = next(iter(self.loaded_config.get("llm_configs", {}).values()), {"api_key":"","base_url":"https://api.openai.com/v1","model_name":"gpt-4o-mini","temperature":0.7,"max_tokens":8192,"timeout":600,"interface_format":"OpenAI"})
 
         choose_configs = self.loaded_config.get("choose_configs", {})
 
@@ -1906,5 +1906,6 @@ class NovelGeneratorGUI:
             self.master.after(0, _set_latest_chapter_on_start)
         except Exception:
             pass
+
 
 
