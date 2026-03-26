@@ -218,7 +218,7 @@ class NovelGeneratorGUI:
 
         self.timeout_var = ctk.IntVar(value=llm_conf.get("timeout", 600))
 
-        self.interface_config_var = ctk.StringVar(value=next(iter(self.loaded_config["llm_configs"])))
+        self.interface_config_var = ctk.StringVar(value=next(iter(self.loaded_config.get("llm_configs", {})), "OpenAI"))
 
 
 
@@ -1130,7 +1130,7 @@ class NovelGeneratorGUI:
 
         self.timeout_var = ctk.IntVar(value=llm_conf.get("timeout", 600))
 
-        self.interface_config_var = ctk.StringVar(value=next(iter(self.loaded_config["llm_configs"])))
+        self.interface_config_var = ctk.StringVar(value=next(iter(self.loaded_config.get("llm_configs", {})), "OpenAI"))
 
 
 
@@ -1901,6 +1901,8 @@ class NovelGeneratorGUI:
             self.master.after(0, _set_latest_chapter_on_start)
         except Exception:
             pass
+
+
 
 
 
