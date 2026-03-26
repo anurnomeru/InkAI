@@ -400,10 +400,23 @@ def create_llm_adapter(
 ) -> BaseLLMAdapter:
     """
     工厂函数：根据 interface_format 返回不同的适配器实例。
+    遵循用户配置的 temperature；仅对 Moonshot/Kimi 在等于 1 时做整型归一化。
     """
-    fmt = interface_format.strip().lower()
-    if fmt == "deepseek":
-        ret = DeepSeekAdapter(api_key, base_url, model_name, max_tokens, temperature, timeout)
+    def _normalize_temp(url: str, model: str, temp):
+        try:
+            if (url and "moonshot.cn" in url) or (model and "kimi" in model.lower()):
+                # 该服务只允许 temperature 为 1；当用户设为 1 或 1.0 时，转成整型 1。
+                if isinstance(temp, float) and abs(temp - 1.0) < 1e-9:
+                    return 1
+                if temp in ("1", "1.0", 1.0):
+                    return 1
+            return temp
+        except Exception:
+            return temp
+
+    fmt = (interface_format or "").strip().lower()
+    temperature = _normalize_temp(base_url, model_name, temperature)
+
     if fmt == "deepseek":
         ret = DeepSeekAdapter(api_key, base_url, model_name, max_tokens, temperature, timeout)
         return _wrap_with_logging(ret)
@@ -437,7 +450,10 @@ def create_llm_adapter(
     elif fmt == "grok":
         ret = GrokAdapter(api_key, base_url, model_name, max_tokens, temperature, timeout)
         return _wrap_with_logging(ret)
-
+    else:
+        # 兜底：按 OpenAI 兼容接口处理
+        ret = OpenAIAdapter(api_key, base_url, model_name, max_tokens, temperature, timeout)
+        return _wrap_with_logging(ret)
 def _wrap_with_logging(adapter: BaseLLMAdapter) -> BaseLLMAdapter:
     """Return a lightweight logging proxy so every .invoke() gets an intent line."""
     class LoggingLLMAdapter(BaseLLMAdapter):
