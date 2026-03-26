@@ -360,6 +360,30 @@ class NovelGeneratorGUI:
 
         build_chapters_tab(self)
 
+
+        # 初次打开：设置为最新章节（只看主文件 chapter_<n>.txt）
+        try:
+            def _apply_latest_chapter_on_start():
+                try:
+                    fp = (self.filepath_var.get() or "").strip()
+                    chap_dir = os.path.join(fp, "chapters")
+                    latest = 0
+                    if os.path.isdir(chap_dir):
+                        for name in os.listdir(chap_dir):
+                            if name.startswith("chapter_") and name.endswith(".txt") and name.count("_") == 1:
+                                num = name.split("_")[1].split(".")[0]
+                                if num.isdigit():
+                                    latest = max(latest, int(num))
+                    if latest > 0:
+                        self.chapter_num_var.set(str(latest))
+                        if hasattr(self, "refresh_draft_variants_list"):
+                            self.refresh_draft_variants_list()
+                except Exception:
+                    pass
+            self.master.after(0, _apply_latest_chapter_on_start)
+        except Exception:
+            pass
+
         build_other_settings_tab(self)
 
 
@@ -1250,6 +1274,30 @@ class NovelGeneratorGUI:
         build_summary_tab(self)
 
         build_chapters_tab(self)
+
+
+        # 初次打开：设置为最新章节（只看主文件 chapter_<n>.txt）
+        try:
+            def _apply_latest_chapter_on_start():
+                try:
+                    fp = (self.filepath_var.get() or "").strip()
+                    chap_dir = os.path.join(fp, "chapters")
+                    latest = 0
+                    if os.path.isdir(chap_dir):
+                        for name in os.listdir(chap_dir):
+                            if name.startswith("chapter_") and name.endswith(".txt") and name.count("_") == 1:
+                                num = name.split("_")[1].split(".")[0]
+                                if num.isdigit():
+                                    latest = max(latest, int(num))
+                    if latest > 0:
+                        self.chapter_num_var.set(str(latest))
+                        if hasattr(self, "refresh_draft_variants_list"):
+                            self.refresh_draft_variants_list()
+                except Exception:
+                    pass
+            self.master.after(0, _apply_latest_chapter_on_start)
+        except Exception:
+            pass
 
         build_other_settings_tab(self)
         try:
