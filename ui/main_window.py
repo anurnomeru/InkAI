@@ -278,7 +278,7 @@ class NovelGeneratorGUI:
 
             self.num_chapters_var = ctk.StringVar(value=str(op.get("num_chapters", 10)))
 
-            self.word_number_var = ctk.StringVar(value=str(op.get("word_number", 3000)))
+            self.word_number_var = ctk.StringVar(value=str(op.get("word_number", 10000)))
 
             self.filepath_var = ctk.StringVar(value=op.get("filepath", ""))
 
@@ -313,7 +313,7 @@ class NovelGeneratorGUI:
 
             self.num_chapters_var = ctk.StringVar(value="10")
 
-            self.word_number_var = ctk.StringVar(value="3000")
+            self.word_number_var = ctk.StringVar(value="10000")
 
             self.filepath_var = ctk.StringVar(value="")
 
@@ -1169,7 +1169,7 @@ class NovelGeneratorGUI:
 
             self.num_chapters_var = ctk.StringVar(value=str(op.get("num_chapters", 10)))
 
-            self.word_number_var = ctk.StringVar(value=str(op.get("word_number", 3000)))
+            self.word_number_var = ctk.StringVar(value=str(op.get("word_number", 10000)))
 
             self.filepath_var = ctk.StringVar(value=op.get("filepath", ""))
 
@@ -1204,7 +1204,7 @@ class NovelGeneratorGUI:
 
             self.num_chapters_var = ctk.StringVar(value="10")
 
-            self.word_number_var = ctk.StringVar(value="3000")
+            self.word_number_var = ctk.StringVar(value="10000")
 
             self.filepath_var = ctk.StringVar(value="")
 
@@ -1831,4 +1831,31 @@ class NovelGeneratorGUI:
         except Exception:
             pass
 
+
+        # 初次打开：将章节号设为文件系统中的最新主章节（chapter_<n>.txt）
+        try:
+            def _set_latest_chapter_on_start():
+                try:
+                    fp = (self.filepath_var.get() or '').strip()
+                    chap_dir = os.path.join(fp, 'chapters')
+                    latest = 0
+                    if os.path.isdir(chap_dir):
+                        for name in os.listdir(chap_dir):
+                            # 仅匹配主文件：chapter_<n>.txt（不含第二个下划线）
+                            if name.startswith('chapter_') and name.endswith('.txt') and name.count('_') == 1:
+                                num = name.split('_')[1].split('.')[0]
+                                if num.isdigit():
+                                    latest = max(latest, int(num))
+                    if latest > 0:
+                        if str(self.chapter_num_var.get()).strip() != str(latest):
+                            self.chapter_num_var.set(str(latest))
+                            # 触发已装好的联动刷新（variants 下拉与文本框）
+                            if hasattr(self, 'refresh_draft_variants_list'):
+                                self.refresh_draft_variants_list()
+                except Exception:
+                    pass
+            # 用 after 确保 UI 构建完成以后再设置
+            self.master.after(0, _set_latest_chapter_on_start)
+        except Exception:
+            pass
 

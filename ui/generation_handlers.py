@@ -49,7 +49,7 @@ def generate_novel_architecture_ui(self):
             topic = self.topic_text.get("0.0", "end").strip()
             genre = self.genre_var.get().strip()
             num_chapters = self.safe_get_int(self.num_chapters_var, 10)
-            word_number = self.safe_get_int(self.word_number_var, 3000)
+            word_number = self.safe_get_int(self.word_number_var, 10000)
             # 获取内容指导
             user_guidance = self.user_guide_text.get("0.0", "end").strip()
 
@@ -142,7 +142,7 @@ def generate_chapter_draft_ui(self):
 
 
             chap_num = self.safe_get_int(self.chapter_num_var, 1)
-            word_number = self.safe_get_int(self.word_number_var, 3000)
+            word_number = self.safe_get_int(self.word_number_var, 10000)
             user_guidance = self.user_guide_text.get("0.0", "end").strip()
 
             char_inv = self.characters_involved_var.get().strip()
@@ -402,7 +402,7 @@ def finalize_chapter_ui(self):
             embedding_model_name = self.embedding_model_name_var.get().strip()
 
             chap_num = self.safe_get_int(self.chapter_num_var, 1)
-            word_number = self.safe_get_int(self.word_number_var, 3000)
+            word_number = self.safe_get_int(self.word_number_var, 10000)
 
             self.safe_log(f"开始定稿第{chap_num}章...")
 
