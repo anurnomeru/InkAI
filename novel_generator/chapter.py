@@ -228,6 +228,7 @@ def get_filtered_knowledge_context(
     filepath: str,
     chapter_info: dict,
     retrieved_texts: list,
+    temperature: float,
     max_tokens: int = 2048,
     timeout: int = 600
 ) -> str:
@@ -242,7 +243,7 @@ def get_filtered_knowledge_context(
             base_url=base_url,
             model_name=model_name,
             api_key=api_key,
-            temperature=0.3,
+            temperature=temperature,
             max_tokens=max_tokens,
             timeout=timeout
         )
@@ -398,7 +399,7 @@ def build_chapter_prompt(
             base_url=base_url,
             model_name=model_name,
             api_key=api_key,
-            temperature=0.3,
+            temperature=temperature,
             max_tokens=max_tokens,
             timeout=timeout
         )
@@ -478,6 +479,7 @@ def build_chapter_prompt(
             filepath=filepath,
             chapter_info=chapter_info_for_filter,
             retrieved_texts=processed_contexts,
+            temperature=temperature,
             max_tokens=max_tokens,
             timeout=timeout
         )
@@ -595,3 +597,6 @@ def generate_chapter_draft(
     save_string_to_txt(chapter_content, chapter_file)
     logging.info(f"[Draft] Chapter {novel_number} generated as a draft.")
     return chapter_content
+
+
+
