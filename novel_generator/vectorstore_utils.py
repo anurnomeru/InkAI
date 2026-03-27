@@ -1,8 +1,6 @@
 ﻿#novel_generator/vectorstore_utils.py
 # -*- coding: utf-8 -*-
-"""
 Vector store related operations (init, update, search, clear).
-"""
 import os
 import logging
 import traceback
@@ -30,11 +28,11 @@ from sklearn.metrics.pairwise import cosine_similarity
 from .common import call_with_retry
 
 def get_vectorstore_dir(filepath: str) -> str:
-    """鑾峰彇 vectorstore 璺緞"""
+    # Get vectorstore path
     return os.path.join(filepath, "vectorstore")
 
 def clear_vector_store(filepath: str) -> bool:
-    """娓呯┖ 娓呯┖鍚戦噺搴?""
+    # Clear vector store
     import shutil
     store_dir = get_vectorstore_dir(filepath)
     if not os.path.exists(store_dir):
@@ -50,10 +48,10 @@ def clear_vector_store(filepath: str) -> bool:
         return False
 
 def init_vector_store(embedding_adapter, texts, filepath: str):
-    """
-    Create or load a Chroma vector store under filepath and insert texts.
+
+    # Create or load a Chroma vector store under filepath and insert texts.
     Return None on failure (non-blocking).
-    """
+    # Return None on failure (non-blocking).
     from langchain.embeddings.base import Embeddings as LCEmbeddings
 
     store_dir = get_vectorstore_dir(filepath)
@@ -93,10 +91,9 @@ def init_vector_store(embedding_adapter, texts, filepath: str):
         return None
 
 def load_vector_store(embedding_adapter, filepath: str):
-    """
-    """
-    Load existing Chroma vector store; return None if missing/failure.
-    """
+
+    # Load existing Chroma vector store; return None if missing/failure.
+
     from langchain.embeddings.base import Embeddings as LCEmbeddings
     store_dir = get_vectorstore_dir(filepath)
     if not os.path.exists(store_dir):
@@ -134,7 +131,7 @@ def load_vector_store(embedding_adapter, filepath: str):
         return None
 
 def split_by_length(text: str, max_length: int = 500):
-    """鎸夌収 max_length 鍒囧垎鏂囨湰"""
+    # Split text by max_length
     segments = []
     start_idx = 0
     while start_idx < len(text):
@@ -145,10 +142,8 @@ def split_by_length(text: str, max_length: int = 500):
     return segments
 
 def split_text_for_vectorstore(chapter_text: str, max_length: int = 500, similarity_threshold: float = 0.7):
-    """
     Split chapter text into segments for vector store insertion.
     浣跨敤 embedding 杩涜鏂囨湰鐩镐技搴﹁绠椼€?
-    """
     if not chapter_text.strip():
         return []
     
@@ -180,10 +175,8 @@ def split_text_for_vectorstore(chapter_text: str, max_length: int = 500, similar
     return final_segments
 
 def update_vector_store(embedding_adapter, new_chapter: str, filepath: str):
-    """
     Insert new chapter segments into the vector store (init if needed).
     鑻ュ簱涓嶅瓨鍦ㄥ垯鍒濆鍖栵紱鑻ュ垵濮嬪寲/鏇存柊澶辫触锛屽垯璺宠繃銆?
-    """
     from utils import read_file, clear_file_content, save_string_to_txt
     splitted_texts = split_text_for_vectorstore(new_chapter)
     if not splitted_texts:
@@ -209,11 +202,9 @@ def update_vector_store(embedding_adapter, new_chapter: str, filepath: str):
         traceback.print_exc()
 
 def get_relevant_context_from_vector_store(embedding_adapter, query: str, filepath: str, k: int = 2, exclude_text: str | None = None) -> str:
-    """
     从向量库中检索与 query 最相关的 k 段文本，拼接返回。
     可选 exclude_text：若提供，则会过滤掉与之完全子串匹配的片段（用于排除“当前章节废稿”）。
     最终仅返回 <=2000 字符的拼接文本。
-    """
     store = load_vector_store(embedding_adapter, filepath)
     if not store:
         logging.info("No vector store found or load failed. Returning empty context.")
@@ -246,7 +237,7 @@ def get_relevant_context_from_vector_store(embedding_adapter, query: str, filepa
         traceback.print_exc()
         return ""
 def _get_sentence_transformer(model_name: str = 'paraphrase-MiniLM-L6-v2'):
-    """鑾峰彇sentence transformer妯″瀷锛屽鐞哠SL闂"""
+    # Load sentence transformer model (handles SSL)
     try:
         # 璁剧疆torch鐜鍙橀噺
         os.environ["TORCH_ALLOW_TF32_CUBLAS_OVERRIDE"] = "0"
