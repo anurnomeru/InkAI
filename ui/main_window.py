@@ -109,6 +109,17 @@ class NovelGeneratorGUI:
         self.config_file = "config.json"
 
         self.loaded_config = load_config(self.config_file)
+        # Ensure WebDAV StringVars exist early, using webdav_config
+        try:
+            _wd = (self.loaded_config.get('webdav_config', {}) or {})
+            self.webdav_url_var = ctk.StringVar(value=_wd.get('webdav_url', ''))
+            self.webdav_username_var = ctk.StringVar(value=_wd.get('webdav_username', ''))
+            self.webdav_password_var = ctk.StringVar(value=_wd.get('webdav_password', ''))
+        except Exception:
+            self.webdav_url_var = ctk.StringVar(value='')
+            self.webdav_username_var = ctk.StringVar(value='')
+            self.webdav_password_var = ctk.StringVar(value='')
+
 
 
 
@@ -297,11 +308,11 @@ class NovelGeneratorGUI:
 
             self.user_guidance_default = op.get("user_guidance", "")
 
-            self.webdav_url_var = ctk.StringVar(value=op.get("webdav_url", ""))
 
-            self.webdav_username_var = ctk.StringVar(value=op.get("webdav_username", ""))
 
-            self.webdav_password_var = ctk.StringVar(value=op.get("webdav_password", ""))
+
+
+
 
 
 
@@ -1024,6 +1035,17 @@ class NovelGeneratorGUI:
         self.config_file = "config.json"
 
         self.loaded_config = load_config(self.config_file)
+        # Ensure WebDAV StringVars exist early, using webdav_config
+        try:
+            _wd = (self.loaded_config.get('webdav_config', {}) or {})
+            self.webdav_url_var = ctk.StringVar(value=_wd.get('webdav_url', ''))
+            self.webdav_username_var = ctk.StringVar(value=_wd.get('webdav_username', ''))
+            self.webdav_password_var = ctk.StringVar(value=_wd.get('webdav_password', ''))
+        except Exception:
+            self.webdav_url_var = ctk.StringVar(value='')
+            self.webdav_username_var = ctk.StringVar(value='')
+            self.webdav_password_var = ctk.StringVar(value='')
+
 
 
 
@@ -1212,11 +1234,11 @@ class NovelGeneratorGUI:
 
             self.user_guidance_default = op.get("user_guidance", "")
 
-            self.webdav_url_var = ctk.StringVar(value=op.get("webdav_url", ""))
 
-            self.webdav_username_var = ctk.StringVar(value=op.get("webdav_username", ""))
 
-            self.webdav_password_var = ctk.StringVar(value=op.get("webdav_password", ""))
+
+
+
 
 
 
@@ -1906,5 +1928,6 @@ class NovelGeneratorGUI:
             self.master.after(0, _set_latest_chapter_on_start)
         except Exception:
             pass
+
 
 
