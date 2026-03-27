@@ -409,7 +409,10 @@ def build_chapter_prompt(
     previous_excerpt = ""
     for text in reversed(recent_texts):
         if text.strip():
-            try:\n            previous_excerpt = _extract_tail_excerpt(text, 3, 200)\n            \n            \n        except Exception:\n            previous_excerpt = text[-800:] if len(text) > 800 else text
+            try:
+                previous_excerpt = _extract_tail_excerpt(text, 3, 200)
+            except Exception:
+                previous_excerpt = text[-800:] if len(text) > 800 else text
             break
 
     # 知识库检索和处理
@@ -618,6 +621,8 @@ def generate_chapter_draft(
     save_string_to_txt(chapter_content, chapter_file)
     logging.info(f"[Draft] Chapter {novel_number} generated as a draft.")
     return chapter_content
+
+
 
 
 
