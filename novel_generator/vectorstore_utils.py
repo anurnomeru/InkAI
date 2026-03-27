@@ -52,7 +52,7 @@ def clear_vector_store(filepath: str) -> bool:
 def init_vector_store(embedding_adapter, texts, filepath: str):
     """
     Create or load a Chroma vector store under filepath and insert texts.
-    濡傛灉Embedding澶辫触锛屽垯杩斿洖 None锛屼笉涓柇浠诲姟銆?
+    Return None on failure (non-blocking).
     """
     from langchain.embeddings.base import Embeddings as LCEmbeddings
 
