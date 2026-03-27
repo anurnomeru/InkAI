@@ -94,8 +94,8 @@ def init_vector_store(embedding_adapter, texts, filepath: str):
 
 def load_vector_store(embedding_adapter, filepath: str):
     """
-    璇诲彇宸插瓨鍦ㄧ殑 Chroma 鍚戦噺搴撱€傝嫢涓嶅瓨鍦ㄥ垯杩斿洖 None銆?
-    濡傛灉鍔犺浇澶辫触锛坋mbedding 鎴朓O闂锛夛紝鍒欒繑鍥?None銆?
+    """
+    Load existing Chroma vector store; return None if missing/failure.
     """
     from langchain.embeddings.base import Embeddings as LCEmbeddings
     store_dir = get_vectorstore_dir(filepath)
