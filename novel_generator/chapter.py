@@ -458,12 +458,12 @@ def build_chapter_prompt(
             actual_k = min(embedding_retrieval_k, max(1, collection_size))
             
             for group in keyword_groups:
-                context = get_relevant_context_from_vector_store(
-                    embedding_adapter=embedding_adapter,
-                    query=group,
-                    filepath=filepath,
-                    k=actual_k
-                )
+                current_chapter_file = os.path.join(filepath, 'chapters', f'chapter_{novel_number}.txt')
+                try:
+                    current_chapter_text = read_file(current_chapter_file)
+                except Exception:
+                    current_chapter_text = ''
+                context = , exclude_text=current_chapter_text
                 if context:
                     if any(kw in group.lower() for kw in ["技法", "手法", "模板"]):
                         all_contexts.append(f"[TECHNIQUE] {context}")
@@ -618,6 +618,7 @@ def generate_chapter_draft(
     save_string_to_txt(chapter_content, chapter_file)
     logging.info(f"[Draft] Chapter {novel_number} generated as a draft.")
     return chapter_content
+
 
 
 

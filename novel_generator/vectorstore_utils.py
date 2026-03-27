@@ -1,7 +1,7 @@
-#novel_generator/vectorstore_utils.py
+﻿#novel_generator/vectorstore_utils.py
 # -*- coding: utf-8 -*-
 """
-向量库相关操作（初始化、更新、检索、清空、文本切分等）
+鍚戦噺搴撶浉鍏虫搷浣滐紙鍒濆鍖栥€佹洿鏂般€佹绱€佹竻绌恒€佹枃鏈垏鍒嗙瓑锛?
 """
 import os
 import logging
@@ -14,15 +14,15 @@ import requests
 import warnings
 from langchain_chroma import Chroma
 logging.basicConfig(
-    filename='app.log',      # 日志文件名
-    filemode='a',            # 追加模式（'w' 会覆盖）
-    level=logging.INFO,      # 记录 INFO 及以上级别的日志
+    filename='app.log',      # 鏃ュ織鏂囦欢鍚?
+    filemode='a',            # 杩藉姞妯″紡锛?w' 浼氳鐩栵級
+    level=logging.INFO,      # 璁板綍 INFO 鍙婁互涓婄骇鍒殑鏃ュ織
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
-# 禁用特定的Torch警告
+# 绂佺敤鐗瑰畾鐨凾orch璀﹀憡
 warnings.filterwarnings('ignore', message='.*Torch was not compiled with flash attention.*')
-os.environ["TOKENIZERS_PARALLELISM"] = "false"  # 禁用tokenizer并行警告
+os.environ["TOKENIZERS_PARALLELISM"] = "false"  # 绂佺敤tokenizer骞惰璀﹀憡
 
 from chromadb.config import Settings
 from langchain.docstore.document import Document
@@ -30,11 +30,11 @@ from sklearn.metrics.pairwise import cosine_similarity
 from .common import call_with_retry
 
 def get_vectorstore_dir(filepath: str) -> str:
-    """获取 vectorstore 路径"""
+    """鑾峰彇 vectorstore 璺緞"""
     return os.path.join(filepath, "vectorstore")
 
 def clear_vector_store(filepath: str) -> bool:
-    """清空 清空向量库"""
+    """娓呯┖ 娓呯┖鍚戦噺搴?""
     import shutil
     store_dir = get_vectorstore_dir(filepath)
     if not os.path.exists(store_dir):
@@ -45,14 +45,14 @@ def clear_vector_store(filepath: str) -> bool:
         logging.info(f"Vector store directory '{store_dir}' removed.")
         return True
     except Exception as e:
-        logging.error(f"无法删除向量库文件夹，请关闭程序后手动删除 {store_dir}。\n {str(e)}")
+        logging.error(f"鏃犳硶鍒犻櫎鍚戦噺搴撴枃浠跺す锛岃鍏抽棴绋嬪簭鍚庢墜鍔ㄥ垹闄?{store_dir}銆俓n {str(e)}")
         traceback.print_exc()
         return False
 
 def init_vector_store(embedding_adapter, texts, filepath: str):
     """
-    在 filepath 下创建/加载一个 Chroma 向量库并插入 texts。
-    如果Embedding失败，则返回 None，不中断任务。
+    鍦?filepath 涓嬪垱寤?鍔犺浇涓€涓?Chroma 鍚戦噺搴撳苟鎻掑叆 texts銆?
+    濡傛灉Embedding澶辫触锛屽垯杩斿洖 None锛屼笉涓柇浠诲姟銆?
     """
     from langchain.embeddings.base import Embeddings as LCEmbeddings
 
@@ -94,8 +94,8 @@ def init_vector_store(embedding_adapter, texts, filepath: str):
 
 def load_vector_store(embedding_adapter, filepath: str):
     """
-    读取已存在的 Chroma 向量库。若不存在则返回 None。
-    如果加载失败（embedding 或IO问题），则返回 None。
+    璇诲彇宸插瓨鍦ㄧ殑 Chroma 鍚戦噺搴撱€傝嫢涓嶅瓨鍦ㄥ垯杩斿洖 None銆?
+    濡傛灉鍔犺浇澶辫触锛坋mbedding 鎴朓O闂锛夛紝鍒欒繑鍥?None銆?
     """
     from langchain.embeddings.base import Embeddings as LCEmbeddings
     store_dir = get_vectorstore_dir(filepath)
@@ -134,7 +134,7 @@ def load_vector_store(embedding_adapter, filepath: str):
         return None
 
 def split_by_length(text: str, max_length: int = 500):
-    """按照 max_length 切分文本"""
+    """鎸夌収 max_length 鍒囧垎鏂囨湰"""
     segments = []
     start_idx = 0
     while start_idx < len(text):
@@ -146,8 +146,8 @@ def split_by_length(text: str, max_length: int = 500):
 
 def split_text_for_vectorstore(chapter_text: str, max_length: int = 500, similarity_threshold: float = 0.7):
     """
-    对新的章节文本进行分段后,再用于存入向量库。
-    使用 embedding 进行文本相似度计算。
+    瀵规柊鐨勭珷鑺傛枃鏈繘琛屽垎娈靛悗,鍐嶇敤浜庡瓨鍏ュ悜閲忓簱銆?
+    浣跨敤 embedding 杩涜鏂囨湰鐩镐技搴﹁绠椼€?
     """
     if not chapter_text.strip():
         return []
@@ -158,7 +158,7 @@ def split_text_for_vectorstore(chapter_text: str, max_length: int = 500, similar
     if not sentences:
         return []
     
-    # 直接按长度分段,不做相似度合并
+    # 鐩存帴鎸夐暱搴﹀垎娈?涓嶅仛鐩镐技搴﹀悎骞?
     final_segments = []
     current_segment = []
     current_length = 0
@@ -181,8 +181,8 @@ def split_text_for_vectorstore(chapter_text: str, max_length: int = 500, similar
 
 def update_vector_store(embedding_adapter, new_chapter: str, filepath: str):
     """
-    将最新章节文本插入到向量库中。
-    若库不存在则初始化；若初始化/更新失败，则跳过。
+    灏嗘渶鏂扮珷鑺傛枃鏈彃鍏ュ埌鍚戦噺搴撲腑銆?
+    鑻ュ簱涓嶅瓨鍦ㄥ垯鍒濆鍖栵紱鑻ュ垵濮嬪寲/鏇存柊澶辫触锛屽垯璺宠繃銆?
     """
     from utils import read_file, clear_file_content, save_string_to_txt
     splitted_texts = split_text_for_vectorstore(new_chapter)
@@ -208,11 +208,11 @@ def update_vector_store(embedding_adapter, new_chapter: str, filepath: str):
         logging.warning(f"Failed to update vector store: {e}")
         traceback.print_exc()
 
-def get_relevant_context_from_vector_store(embedding_adapter, query: str, filepath: str, k: int = 2) -> str:
+def get_relevant_context_from_vector_store(embedding_adapter, query: str, filepath: str, k: int = 2, exclude_text: str | None = None) -> str:
     """
-    从向量库中检索与 query 最相关的 k 条文本，拼接后返回。
-    如果向量库加载/检索失败，则返回空字符串。
-    最终只返回最多2000字符的检索片段。
+    从向量库中检索与 query 最相关的 k 段文本，拼接返回。
+    可选 exclude_text：若提供，则会过滤掉与之完全子串匹配的片段（用于排除“当前章节废稿”）。
+    最终仅返回 <=2000 字符的拼接文本。
     """
     store = load_vector_store(embedding_adapter, filepath)
     if not store:
@@ -224,6 +224,19 @@ def get_relevant_context_from_vector_store(embedding_adapter, query: str, filepa
         if not docs:
             logging.info(f"No relevant documents found for query '{query}'. Returning empty context.")
             return ""
+        # 过滤当前章节可能的废稿（启发式：完全子串匹配）
+        if exclude_text:
+            try:
+                excl = exclude_text
+                filtered = []
+                for d in docs:
+                    pc = getattr(d, 'page_content', '') or ''
+                    if pc and pc not in excl:
+                        filtered.append(d)
+                if filtered:
+                    docs = filtered
+            except Exception:
+                pass
         combined = "\n".join([d.page_content for d in docs])
         if len(combined) > 2000:
             combined = combined[:2000]
@@ -232,15 +245,14 @@ def get_relevant_context_from_vector_store(embedding_adapter, query: str, filepa
         logging.warning(f"Similarity search failed: {e}")
         traceback.print_exc()
         return ""
-
 def _get_sentence_transformer(model_name: str = 'paraphrase-MiniLM-L6-v2'):
-    """获取sentence transformer模型，处理SSL问题"""
+    """鑾峰彇sentence transformer妯″瀷锛屽鐞哠SL闂"""
     try:
-        # 设置torch环境变量
+        # 璁剧疆torch鐜鍙橀噺
         os.environ["TORCH_ALLOW_TF32_CUBLAS_OVERRIDE"] = "0"
         os.environ["TORCH_CUDNN_V8_API_ENABLED"] = "0"
         
-        # 禁用SSL验证
+        # 绂佺敤SSL楠岃瘉
         ssl._create_default_https_context = ssl._create_unverified_context
         
         # ...existing code...
@@ -248,3 +260,4 @@ def _get_sentence_transformer(model_name: str = 'paraphrase-MiniLM-L6-v2'):
         logging.error(f"Failed to load sentence transformer model: {e}")
         traceback.print_exc()
         return None
+
