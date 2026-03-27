@@ -361,6 +361,23 @@ class NovelGeneratorGUI:
 
         build_other_settings_tab(self)
 
+        # ---- Startup: link chapter number and variants; load latest chapter ----
+        try:
+            # 章节号变更 -> 刷新变体并加载对应内容
+            self.chapter_num_var.trace_add("write", lambda *a: self._on_chapter_num_changed())
+        except Exception:
+            pass
+        try:
+            # 保存路径变更 -> 重新计算最新章节
+            self.filepath_var.trace_add("write", lambda *a: self._on_filepath_changed())
+        except Exception:
+            pass
+        try:
+            # 首次进入根据保存路径下 chapters/ 自动选中最新章节
+            self.master.after(0, self._apply_latest_chapter_on_start)
+        except Exception:
+            pass
+
 
 
 
@@ -439,6 +456,78 @@ class NovelGeneratorGUI:
 
         self.chapter_result.see("end")
 
+
+    def _load_text_and_show(self, full_path: str):
+        try:
+            if os.path.exists(full_path):
+                text = read_file(full_path)
+                self.chapter_result.delete("0.0","end")
+                self.chapter_result.insert("0.0", text)
+                self.chapter_result.see("end")
+        except Exception:
+            pass
+
+    def _apply_latest_chapter_on_start(self):
+        try:
+            fp = (self.filepath_var.get() or '').strip()
+            chap_dir = os.path.join(fp, 'chapters')
+            latest = 0
+            if os.path.isdir(chap_dir):
+                for name in os.listdir(chap_dir):
+                    if name.startswith('chapter_') and name.endswith('.txt') and name.count('_') == 1:
+                        num = name.split('_')[1].split('.')[0]
+                        if num.isdigit():
+                            latest = max(latest, int(num))
+            if latest > 0:
+                # 设置章节号并触发联动
+                if str(self.chapter_num_var.get()).strip() != str(latest):
+                    self.chapter_num_var.set(str(latest))
+                else:
+                    self._on_chapter_num_changed()
+        except Exception:
+            pass
+
+    def _on_filepath_changed(self):
+        try:
+            self._apply_latest_chapter_on_start()
+        except Exception:
+            pass
+
+    def _on_chapter_num_changed(self):
+        try:
+            # 刷新下拉选单
+            if hasattr(self, 'refresh_draft_variants_list'):
+                self.refresh_draft_variants_list()
+            chap = str(self.chapter_num_var.get()).strip()
+            fp = (self.filepath_var.get() or '').strip()
+            if not (chap and fp):
+                return
+            # 优先主稿，其次最新变体
+            main_name = f'chapter_{chap}.txt'
+            main_path = os.path.join(fp, 'chapters', main_name)
+            selected = None
+            if os.path.exists(main_path):
+                selected = main_name
+            else:
+                drafts_dir = os.path.join(fp, 'chapters', '_drafts')
+                if os.path.isdir(drafts_dir):
+                    prefix = f'chapter_{chap}_'
+                    draft_vals = sorted([f for f in os.listdir(drafts_dir) if f.startswith(prefix) and f.endswith('.txt')])
+                    if draft_vals:
+                        selected = draft_vals[-1]
+            if selected:
+                try:
+                    self.draft_variant_select_var.set(selected)
+                except Exception:
+                    pass
+                # 加载到编辑区
+                if selected.count('_') == 1:
+                    full = os.path.join(fp, 'chapters', selected)  # 主稿
+                else:
+                    full = os.path.join(fp, 'chapters', '_drafts', selected)
+                self._load_text_and_show(full)
+        except Exception:
+            pass
     
 
     def test_llm_config(self):
@@ -947,22 +1036,29 @@ class NovelGeneratorGUI:
     def refresh_draft_variants_list(self):
         try:
             filepath = self.filepath_var.get().strip()
-            chap = self.chapter_num_var.get().strip()
+            chap = str(self.chapter_num_var.get()).strip()
             if not (filepath and chap):
                 return
             drafts_dir = os.path.join(filepath, 'chapters', '_drafts')
-            if not os.path.exists(drafts_dir):
-                values = []
-            else:
-                prefix = f"chapter_{chap}_"
-                values = [f for f in sorted(os.listdir(drafts_dir)) if f.startswith(prefix) and f.endswith('.txt')]
+            values = []
+            main_name = 'chapter_' + chap + '.txt'
+            main_path = os.path.join(filepath, 'chapters', main_name)
+            if os.path.exists(main_path):
+                values.append(main_name)
+            if os.path.exists(drafts_dir):
+                prefix = 'chapter_' + chap + '_'
+                files = os.listdir(drafts_dir)
+                draft_vals = [f for f in sorted(files) if f.startswith(prefix) and f.endswith('.txt')]
+                values.extend(draft_vals)
             self.draft_variant_select_menu.configure(values=values)
             cur = self.draft_variant_select_var.get()
             if cur not in values:
-                self.draft_variant_select_var.set(values[0] if values else '')
+                if values:
+                    self.draft_variant_select_var.set(values[-1])
+                else:
+                    self.draft_variant_select_var.set('')
         except Exception:
             pass
-
     def on_draft_variant_selected(self, value: str):
         try:
             if not value:
@@ -976,4 +1072,7 @@ class NovelGeneratorGUI:
                 self.chapter_result.see('end')
         except Exception:
             pass
+
+
+
 
