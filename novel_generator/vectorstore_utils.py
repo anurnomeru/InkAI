@@ -1,7 +1,7 @@
 ﻿#novel_generator/vectorstore_utils.py
 # -*- coding: utf-8 -*-
 """
-鍚戦噺搴撶浉鍏虫搷浣滐紙鍒濆鍖栥€佹洿鏂般€佹绱€佹竻绌恒€佹枃鏈垏鍒嗙瓑锛?
+Vector store related operations (init, update, search, clear).
 """
 import os
 import logging
@@ -51,7 +51,7 @@ def clear_vector_store(filepath: str) -> bool:
 
 def init_vector_store(embedding_adapter, texts, filepath: str):
     """
-    鍦?filepath 涓嬪垱寤?鍔犺浇涓€涓?Chroma 鍚戦噺搴撳苟鎻掑叆 texts銆?
+    Create or load a Chroma vector store under filepath and insert texts.
     濡傛灉Embedding澶辫触锛屽垯杩斿洖 None锛屼笉涓柇浠诲姟銆?
     """
     from langchain.embeddings.base import Embeddings as LCEmbeddings
@@ -146,7 +146,7 @@ def split_by_length(text: str, max_length: int = 500):
 
 def split_text_for_vectorstore(chapter_text: str, max_length: int = 500, similarity_threshold: float = 0.7):
     """
-    瀵规柊鐨勭珷鑺傛枃鏈繘琛屽垎娈靛悗,鍐嶇敤浜庡瓨鍏ュ悜閲忓簱銆?
+    Split chapter text into segments for vector store insertion.
     浣跨敤 embedding 杩涜鏂囨湰鐩镐技搴﹁绠椼€?
     """
     if not chapter_text.strip():
@@ -181,7 +181,7 @@ def split_text_for_vectorstore(chapter_text: str, max_length: int = 500, similar
 
 def update_vector_store(embedding_adapter, new_chapter: str, filepath: str):
     """
-    灏嗘渶鏂扮珷鑺傛枃鏈彃鍏ュ埌鍚戦噺搴撲腑銆?
+    Insert new chapter segments into the vector store (init if needed).
     鑻ュ簱涓嶅瓨鍦ㄥ垯鍒濆鍖栵紱鑻ュ垵濮嬪寲/鏇存柊澶辫触锛屽垯璺宠繃銆?
     """
     from utils import read_file, clear_file_content, save_string_to_txt
