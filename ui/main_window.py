@@ -333,7 +333,18 @@ class NovelGeneratorGUI:
 
         # --------------- 鏁翠綋Tab甯冨眬 ---------------
 
-        self.tabview = ctk.CTkTabview(self.master)
+                # --- Choose configs StringVars (create if missing) ---
+        try:
+            choose_configs = self.loaded_config.get("choose_configs", {})
+        except Exception:
+            choose_configs = {}
+        try:
+            last_embedding = self.loaded_config.get("last_embedding_interface_format", "OpenAI")
+        except Exception:
+            last_embedding = "OpenAI"
+        import customtkinter as ctk
+        if not hasattr(self, 'embedding_choice_var'):
+            self.embedding_choice_var = ctk.StringVar(value=choose_configs.get('embedding_choice', last_embedding))self.tabview = ctk.CTkTabview(self.master)
 
         self.tabview.pack(fill="both", expand=True)
 
@@ -1072,6 +1083,7 @@ class NovelGeneratorGUI:
                 self.chapter_result.see('end')
         except Exception:
             pass
+
 
 
 

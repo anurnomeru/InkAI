@@ -573,6 +573,17 @@ def build_config_choose_tab(self):
     consistency_review_dropdown = ctk.CTkOptionMenu(self.config_choose, values=config_choose_options, variable=self.consistency_review_llm_var, font=("Microsoft YaHei", 12))
     consistency_review_dropdown.grid(row=4, column=1, padx=5, pady=5, sticky="nsew")
 
+    # 选择使用的 Embedding 配置
+    embed_names = list(self.loaded_config.get("embedding_configs", {}).keys())
+    create_label_with_help(self, parent=self.config_choose, label_text="使用的 Embedding 配置", tooltip_key="embedding_choice", row=5, column=0, font=("Microsoft YaHei", 12))
+    if not hasattr(self, 'embedding_choice_var'):
+        # 回退：默认取 last_embedding_interface_format
+        last_embedding = self.loaded_config.get("last_embedding_interface_format", "OpenAI")
+        import customtkinter as ctk
+        self.embedding_choice_var = ctk.StringVar(value=last_embedding)
+    embedding_choice_dropdown = ctk.CTkOptionMenu(self.config_choose, values=embed_names, variable=self.embedding_choice_var, font=("Microsoft YaHei", 12))
+    embedding_choice_dropdown.grid(row=5, column=1, padx=5, pady=5, sticky="nsew")
+
     def save_config_choose():
         config_data = load_config(self.config_file)["choose_configs"]
         if not config_data:
@@ -582,6 +593,7 @@ def build_config_choose_tab(self):
         config_data["prompt_draft_llm"] = self.prompt_draft_llm_var.get()
         config_data["final_chapter_llm"] = self.final_chapter_llm_var.get()
         config_data["consistency_review_llm"] = self.consistency_review_llm_var.get()
+        config_data["embedding_choice"] = self.embedding_choice_var.get()
 
 
         config_data_full = load_config(self.config_file)
@@ -596,6 +608,14 @@ def build_config_choose_tab(self):
             dropdown.configure(values=config_names)
             if config_names and dropdown.cget("variable").get() not in config_names:
                 dropdown.cget("variable").set(config_names[0])
+        # Embedding 刷新
+        embed_names = list(self.loaded_config.get("embedding_configs", {}).keys())
+        try:
+            embedding_choice_dropdown.configure(values=embed_names)
+            if embed_names and self.embedding_choice_var.get() not in embed_names:
+                self.embedding_choice_var.set(embed_names[0])
+        except Exception:
+            pass
 
     save_btn = ctk.CTkButton(
         self.config_choose, 
@@ -796,5 +816,7 @@ def save_config_btn(self):
         self.log("配置已保存。")
     else:
         messagebox.showerror("错误", "保存配置失败。")
+
+
 
 
