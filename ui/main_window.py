@@ -283,7 +283,7 @@ class NovelGeneratorGUI:
             self.chapter_num_var = ctk.StringVar(value=str(op.get("chapter_num", "1")))  
   
   
-            self.draft_variants_var = ctk.StringVar(value='1')  
+            self.draft_variants_var = ctk.StringVar(value=str(op.get('draft_variants', 3)))  
   
             self.characters_involved_var = ctk.StringVar(value=op.get("characters_involved", ""))  
   
@@ -316,6 +316,7 @@ class NovelGeneratorGUI:
             self.filepath_var = ctk.StringVar(value="")  
   
             self.chapter_num_var = ctk.StringVar(value="1")  
+            self.draft_variants_var = ctk.StringVar(value='3')
   
             self.characters_involved_var = ctk.StringVar(value="")  
   
@@ -1020,7 +1021,8 @@ class NovelGeneratorGUI:
                 'characters_involved': self.characters_involved_var.get() if hasattr(self,'characters_involved_var') else '',  
                 'key_items': self.key_items_var.get() if hasattr(self,'key_items_var') else '',  
                 'scene_location': self.scene_location_var.get() if hasattr(self,'scene_location_var') else '',  
-                'time_constraint': self.time_constraint_var.get() if hasattr(self,'time_constraint_var') else ''  
+                'time_constraint': self.time_constraint_var.get() if hasattr(self,'time_constraint_var') else '',,
+                'draft_variants': _safe_int(self.draft_variants_var, 3) if hasattr(self,'draft_variants_var') else 3
             }  
             cfg['other_params'] = other  
   
