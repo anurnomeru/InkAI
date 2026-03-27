@@ -18,42 +18,7 @@ from novel_generator import (
     enrich_chapter_text,
     build_chapter_prompt
 )
-
-def _resolve_embedding_config(self):
-    try:
-        # 优先使用 choose_configs: embedding_choice
-        choice = ''
-        try:
-            choice = self.embedding_choice_var.get().strip()
-        except Exception:
-            choice = ''
-        emb_cfgs = self.loaded_config.get(''embedding_configs'', {}) if isinstance(self.loaded_config, dict) else {}
-        if choice and choice in emb_cfgs:
-            emb = emb_cfgs.get(choice, {}) or {}
-            interface = emb.get(''interface_format'', choice)
-            api_key = emb.get(''api_key'', '')
-            base_url = emb.get(''base_url'', '')
-            model = emb.get(''model_name'', '')
-            try:
-                k = int(emb.get(''retrieval_k'', 4))
-            except Exception:
-                k = 4
-            return interface, api_key, base_url, model, k
-        # 回退：使用当前“Embedding settings”面板上的值
-        interface = self.embedding_interface_format_var.get().strip()
-        api_key = self.embedding_api_key_var.get().strip()
-        base_url = self.embedding_url_var.get().strip()
-        model = self.embedding_model_name_var.get().strip()
-        try:
-            k = int(self.embedding_retrieval_k_var.get())
-        except Exception:
-            k = 4
-        return interface, api_key, base_url, model, k
-    except Exception:
-        return (self.embedding_interface_format_var.get().strip() if hasattr(self, ''embedding_interface_format_var'') else ''), \
-               (self.embedding_api_key_var.get().strip() if hasattr(self, ''embedding_api_key_var'') else ''), \
-               (self.embedding_url_var.get().strip() if hasattr(self, ''embedding_url_var'') else ''), \
-               (self.embedding_model_name_var.get().strip() if hasattr(self, ''embedding_model_name_var'') else ''), 4from consistency_checker import check_consistency
+from consistency_checker import check_consistency
 
 def generate_novel_architecture_ui(self):
     filepath = self.filepath_var.get().strip()
@@ -83,8 +48,8 @@ def generate_novel_architecture_ui(self):
 
             topic = self.topic_text.get("0.0", "end").strip()
             genre = self.genre_var.get().strip()
-            num_chapters = self.safe_get_int(self.num_chapters_var, 1)
-            word_number = self.safe_get_int(self.word_number_var, 10000)
+            num_chapters = self.safe_get_int(self.num_chapters_var, 10)
+            word_number = self.safe_get_int(self.word_number_var, 3000)
             # 获取内容指导
             user_guidance = self.user_guide_text.get("0.0", "end").strip()
 
@@ -104,7 +69,7 @@ def generate_novel_architecture_ui(self):
                 timeout=timeout_val,
                 user_guidance=user_guidance  # 添加内容指导参数
             )
-            self.safe_log("? 小说架构生成完成。请在 'Novel Architecture' 标签页查看或编辑。")
+            self.safe_log("✅ 小说架构生成完成。请在 'Novel Architecture' 标签页查看或编辑。")
         except Exception:
             self.handle_exception("生成小说架构时出错")
         finally:
@@ -124,7 +89,7 @@ def generate_chapter_blueprint_ui(self):
         self.disable_button_safe(self.btn_generate_directory)
         try:
 
-            number_of_chapters = self.safe_get_int(self.num_chapters_var, 1)
+            number_of_chapters = self.safe_get_int(self.num_chapters_var, 10)
 
             interface_format = self.loaded_config["llm_configs"][self.chapter_outline_llm_var.get()]["interface_format"]
             api_key = self.loaded_config["llm_configs"][self.chapter_outline_llm_var.get()]["api_key"]
@@ -150,7 +115,7 @@ def generate_chapter_blueprint_ui(self):
                 timeout=timeout_val,
                 user_guidance=user_guidance  # 新增参数
             )
-            self.safe_log("? 章节蓝图生成完成。请在 'Chapter Blueprint' 标签页查看或编辑。")
+            self.safe_log("✅ 章节蓝图生成完成。请在 'Chapter Blueprint' 标签页查看或编辑。")
         except Exception:
             self.handle_exception("生成章节蓝图时出错")
         finally:
@@ -177,7 +142,7 @@ def generate_chapter_draft_ui(self):
 
 
             chap_num = self.safe_get_int(self.chapter_num_var, 1)
-            word_number = self.safe_get_int(self.word_number_var, 10000)
+            word_number = self.safe_get_int(self.word_number_var, 3000)
             user_guidance = self.user_guide_text.get("0.0", "end").strip()
 
             char_inv = self.characters_involved_var.get().strip()
@@ -185,12 +150,15 @@ def generate_chapter_draft_ui(self):
             scene_loc = self.scene_location_var.get().strip()
             time_constr = self.time_constraint_var.get().strip()
 
-            embedding_interface_format, embedding_api_key, embedding_url, embedding_model_name, embedding_k = _resolve_embedding_config(self)
+            embedding_api_key = self.embedding_api_key_var.get().strip()
+            embedding_url = self.embedding_url_var.get().strip()
+            embedding_interface_format = self.embedding_interface_format_var.get().strip()
+            embedding_model_name = self.embedding_model_name_var.get().strip()
+            embedding_k = self.safe_get_int(self.embedding_retrieval_k_var, 4)
 
             self.safe_log(f"生成第{chap_num}章草稿：准备生成请求提示词...")
 
             # 调用新添加的 build_chapter_prompt 函数构造初始提示词
-            self.safe_log(f"[Draft LLM] name={self.prompt_draft_llm_var.get()} model={model_name} base={base_url} temp={temperature} max_tokens={max_tokens} timeout={timeout_val}")
             prompt_text = build_chapter_prompt(
                 api_key=api_key,
                 base_url=base_url,
@@ -213,7 +181,59 @@ def generate_chapter_draft_ui(self):
                 max_tokens=max_tokens,
                 timeout=timeout_val
             )
-            # NOTE: concurrency moved after prompt confirmation to use edited prompt
+            # 并发多版本草稿（当草稿版本数>1时，直接并发生成到 _drafts 并返回）
+            variant_count = 1
+            try:
+                variant_count = int(self.draft_variants_var.get().strip()) if hasattr(self, 'draft_variants_var') else 1
+            except Exception:
+                variant_count = 1
+            if variant_count and variant_count > 1:
+                self.safe_log(f"开始并发生成 {variant_count} 个草稿版本...")
+                chapters_dir = os.path.join(filepath, "chapters")
+                drafts_dir = os.path.join(chapters_dir, "_drafts")
+                os.makedirs(drafts_dir, exist_ok=True)
+                threads = []
+                def worker(k:int):
+                    try:
+                        target_path = os.path.join(drafts_dir, f"chapter_{chap_num}_{k}.txt")
+                        _ = generate_chapter_draft(
+                            api_key=api_key,
+                            base_url=base_url,
+                            model_name=model_name,
+                            filepath=filepath,
+                            novel_number=chap_num,
+                            word_number=word_number,
+                            temperature=temperature,
+                            user_guidance=user_guidance,
+                            characters_involved=char_inv,
+                            key_items=key_items,
+                            scene_location=scene_loc,
+                            time_constraint=time_constr,
+                            embedding_api_key=embedding_api_key,
+                            embedding_url=embedding_url,
+                            embedding_interface_format=embedding_interface_format,
+                            embedding_model_name=embedding_model_name,
+                            embedding_retrieval_k=embedding_k,
+                            interface_format=interface_format,
+                            max_tokens=max_tokens,
+                            timeout=timeout_val,
+                            custom_prompt_text=prompt_text,
+                            target_file=target_path
+                        )
+                    except Exception:
+                        pass
+                for k in range(1, variant_count+1):
+                    t = threading.Thread(target=worker, args=(k,), daemon=True)
+                    threads.append(t)
+                    t.start()
+                for t in threads:
+                    t.join()
+                try:
+                    self.master.after(0, self.refresh_draft_variants_list)
+                except Exception:
+                    pass
+                self.enable_button_safe(self.btn_generate_chapter)
+                return
             # 弹出可编辑提示词对话框，等待用户确认或取消
             result = {"prompt": None}
             event = threading.Event()
@@ -303,73 +323,11 @@ def generate_chapter_draft_ui(self):
             event.wait()  # 等待用户操作完成
             edited_prompt = result["prompt"]
             if edited_prompt is None:
-                self.safe_log("? 用户取消了草稿生成请求。")
+                self.safe_log("❌ 用户取消了草稿生成请求。")
                 return
-            # 并发多版本：使用已确认的提示词
-            try:
-                variant_count = int(self.draft_variants_var.get().strip()) if hasattr(self, 'draft_variants_var') else 1
-            except Exception:
-                variant_count = 1
-
-            if variant_count and variant_count > 1:
-                self.safe_log(f"开始并发生成 {variant_count} 个草稿版本...")
-                chapters_dir = os.path.join(filepath, "chapters")
-                drafts_dir = os.path.join(chapters_dir, "_drafts")
-                os.makedirs(drafts_dir, exist_ok=True)
-
-                threads = []
-                def worker(k: int):
-                    try:
-                        target_path = os.path.join(drafts_dir, f"chapter_{chap_num}_{k}.txt")
-                        _ = generate_chapter_draft(
-                            api_key=api_key,
-                            base_url=base_url,
-                            model_name=model_name,
-                            filepath=filepath,
-                            novel_number=chap_num,
-                            word_number=word_number,
-                            temperature=temperature,
-                            user_guidance=user_guidance,
-                            characters_involved=char_inv,
-                            key_items=key_items,
-                            scene_location=scene_loc,
-                            time_constraint=time_constr,
-                            embedding_api_key=embedding_api_key,
-                            embedding_url=embedding_url,
-                            embedding_interface_format=embedding_interface_format,
-                            embedding_model_name=embedding_model_name,
-                            embedding_retrieval_k=embedding_k,
-                            interface_format=interface_format,
-                            max_tokens=max_tokens,
-                            timeout=timeout_val,
-                            custom_prompt_text=edited_prompt,
-                            target_file=target_path
-                        )
-                        self.safe_log(f"OK Variant {k} generated: chapter_{chap_num}_{k}.txt")
-                        try:
-                            self.master.after(0, self.refresh_draft_variants_list)
-                        except Exception:
-                            pass
-                    except Exception as e:
-                        self.safe_log(f"FAIL Variant {k} failed: {str(e)}")
-
-                for k in range(1, variant_count + 1):
-                    t = threading.Thread(target=worker, args=(k,), daemon=True)
-                    threads.append(t)
-                    t.start()
-                for t in threads:
-                    t.join()
-
-                try:
-                    self.master.after(0, self.refresh_draft_variants_list)
-                except Exception:
-                    pass
-
-                # 多版本情况下，不覆盖主文件，直接返回
-                return
-
 
             self.safe_log("开始生成章节草稿...")
+            from novel_generator.chapter import generate_chapter_draft
             draft_text = generate_chapter_draft(
                 api_key=api_key,
                 base_url=base_url,
@@ -394,10 +352,10 @@ def generate_chapter_draft_ui(self):
                 custom_prompt_text=edited_prompt  # 使用用户编辑后的提示词
             )
             if draft_text:
-                self.safe_log(f"? 第{chap_num}章草稿生成完成。请在左侧查看或编辑。")
+                self.safe_log(f"✅ 第{chap_num}章草稿生成完成。请在左侧查看或编辑。")
                 self.master.after(0, lambda: self.show_chapter_in_textbox(draft_text))
             else:
-                self.safe_log("?? 本章草稿生成失败或无内容。")
+                self.safe_log("⚠️ 本章草稿生成失败或无内容。")
         except Exception:
             self.handle_exception("生成章节草稿时出错")
         finally:
@@ -427,7 +385,226 @@ def finalize_chapter_ui(self):
             timeout_val = self.loaded_config["llm_configs"][self.final_chapter_llm_var.get()]["timeout"]
 
 
-            embedding_interface_format, embedding_api_key, embedding_url, embedding_model_name, embedding_k = _resolve_embedding_config(self)
+            embedding_api_key = self.embedding_api_key_var.get().strip()
+            embedding_url = self.embedding_url_var.get().strip()
+            embedding_interface_format = self.embedding_interface_format_var.get().strip()
+            embedding_model_name = self.embedding_model_name_var.get().strip()
+
+            chap_num = self.safe_get_int(self.chapter_num_var, 1)
+            word_number = self.safe_get_int(self.word_number_var, 3000)
+
+            self.safe_log(f"开始定稿第{chap_num}章...")
+
+            chapters_dir = os.path.join(filepath, "chapters")
+            os.makedirs(chapters_dir, exist_ok=True)
+            chapter_file = os.path.join(chapters_dir, f"chapter_{chap_num}.txt")
+
+            edited_text = self.chapter_result.get("0.0", "end").strip()
+
+            if len(edited_text) < 0.7 * word_number:
+                ask = messagebox.askyesno("字数不足", f"当前章节字数 ({len(edited_text)}) 低于目标字数({word_number})的70%，是否要尝试扩写？")
+                if ask:
+                    self.safe_log("正在扩写章节内容...")
+                    enriched = enrich_chapter_text(
+                        chapter_text=edited_text,
+                        word_number=word_number,
+                        api_key=api_key,
+                        base_url=base_url,
+                        model_name=model_name,
+                        temperature=temperature,
+                        interface_format=interface_format,
+                        max_tokens=max_tokens,
+                        timeout=timeout_val
+                    )
+                    edited_text = enriched
+                    self.master.after(0, lambda: self.chapter_result.delete("0.0", "end"))
+                    self.master.after(0, lambda: self.chapter_result.insert("0.0", edited_text))
+            clear_file_content(chapter_file)
+            save_string_to_txt(edited_text, chapter_file)
+
+            finalize_chapter(
+                novel_number=chap_num,
+                word_number=word_number,
+                api_key=api_key,
+                base_url=base_url,
+                model_name=model_name,
+                temperature=temperature,
+                filepath=filepath,
+                embedding_api_key=embedding_api_key,
+                embedding_url=embedding_url,
+                embedding_interface_format=embedding_interface_format,
+                embedding_model_name=embedding_model_name,
+                interface_format=interface_format,
+                max_tokens=max_tokens,
+                timeout=timeout_val
+            )
+            self.safe_log(f"✅ 第{chap_num}章定稿完成（已更新前文摘要、角色状态、向量库）。")
+
+            final_text = read_file(chapter_file)
+            self.master.after(0, lambda: self.show_chapter_in_textbox(final_text))
+        except Exception:
+            self.handle_exception("定稿章节时出错")
+        finally:
+            self.enable_button_safe(self.btn_finalize_chapter)
+    threading.Thread(target=task, daemon=True).start()
+
+def do_consistency_check(self):
+    filepath = self.filepath_var.get().strip()
+    if not filepath:
+        messagebox.showwarning("警告", "请先配置保存文件路径。")
+        return
+
+    def task():
+        self.disable_button_safe(self.btn_check_consistency)
+        try:
+            interface_format = self.loaded_config["llm_configs"][self.consistency_review_llm_var.get()]["interface_format"]
+            api_key = self.loaded_config["llm_configs"][self.consistency_review_llm_var.get()]["api_key"]
+            base_url = self.loaded_config["llm_configs"][self.consistency_review_llm_var.get()]["base_url"]
+            model_name = self.loaded_config["llm_configs"][self.consistency_review_llm_var.get()]["model_name"]
+            temperature = self.loaded_config["llm_configs"][self.consistency_review_llm_var.get()]["temperature"]
+            max_tokens = self.loaded_config["llm_configs"][self.consistency_review_llm_var.get()]["max_tokens"]
+            timeout = self.loaded_config["llm_configs"][self.consistency_review_llm_var.get()]["timeout"]
+
+
+            chap_num = self.safe_get_int(self.chapter_num_var, 1)
+            chap_file = os.path.join(filepath, "chapters", f"chapter_{chap_num}.txt")
+            chapter_text = read_file(chap_file)
+
+            if not chapter_text.strip():
+                self.safe_log("⚠️ 当前章节文件为空或不存在，无法审校。")
+                return
+
+            self.safe_log("开始一致性审校...")
+            result = check_consistency(
+                novel_setting="",
+                character_state=read_file(os.path.join(filepath, "character_state.txt")),
+                global_summary=read_file(os.path.join(filepath, "global_summary.txt")),
+                chapter_text=chapter_text,
+                api_key=api_key,
+                base_url=base_url,
+                model_name=model_name,
+                temperature=temperature,
+                interface_format=interface_format,
+                max_tokens=max_tokens,
+                timeout=timeout,
+                plot_arcs=""
+            )
+            self.safe_log("审校结果：")
+            self.safe_log(result)
+        except Exception:
+            self.handle_exception("审校时出错")
+        finally:
+            self.enable_button_safe(self.btn_check_consistency)
+    threading.Thread(target=task, daemon=True).start()
+def generate_batch_ui(self):
+
+    # PenBo 优化界面，使用customtkinter进行批量生成章节界面
+    def open_batch_dialog():
+        dialog = ctk.CTkToplevel()
+        dialog.title("批量生成章节")
+        
+        chapter_file = os.path.join(self.filepath_var.get().strip(), "chapters")
+        files = glob.glob(os.path.join(chapter_file, "chapter_*.txt"))
+        if not files:
+            num = 1
+        else:
+            num = max(int(os.path.basename(f).split('_')[1].split('.')[0]) for f in files) + 1
+            
+        dialog.geometry("400x200")
+        dialog.resizable(False, False)
+        
+        # 创建网格布局
+        dialog.grid_columnconfigure(0, weight=0)
+        dialog.grid_columnconfigure(1, weight=1)
+        dialog.grid_columnconfigure(2, weight=0)
+        dialog.grid_columnconfigure(3, weight=1)
+        
+        # 起始章节
+        ctk.CTkLabel(dialog, text="起始章节:").grid(row=0, column=0, padx=10, pady=10, sticky="w")
+        entry_start = ctk.CTkEntry(dialog)
+        entry_start.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
+        entry_start.insert(0, str(num))
+        
+        # 结束章节
+        ctk.CTkLabel(dialog, text="结束章节:").grid(row=0, column=2, padx=10, pady=10, sticky="w")
+        entry_end = ctk.CTkEntry(dialog)
+        entry_end.grid(row=0, column=3, padx=10, pady=10, sticky="ew")
+        
+        # 期望字数
+        ctk.CTkLabel(dialog, text="期望字数:").grid(row=1, column=0, padx=10, pady=10, sticky="w")
+        entry_word = ctk.CTkEntry(dialog)
+        entry_word.grid(row=1, column=1, padx=10, pady=10, sticky="ew")
+        entry_word.insert(0, self.word_number_var.get())
+        
+        # 最低字数
+        ctk.CTkLabel(dialog, text="最低字数:").grid(row=1, column=2, padx=10, pady=10, sticky="w")
+        entry_min = ctk.CTkEntry(dialog)
+        entry_min.grid(row=1, column=3, padx=10, pady=10, sticky="ew")
+        entry_min.insert(0, self.word_number_var.get())
+
+        # 自动扩写选项
+        auto_enrich_bool = ctk.BooleanVar()
+        auto_enrich_bool_ck = ctk.CTkCheckBox(dialog, text="低于最低字数时自动扩写", variable=auto_enrich_bool)
+        auto_enrich_bool_ck.grid(row=2, column=0, columnspan=2, padx=10, pady=10, sticky="w")
+
+        result = {"start": None, "end": None, "word": None, "min": None, "auto_enrich": None, "close": False}
+
+        def on_confirm():
+            nonlocal result
+            if not entry_start.get() or not entry_end.get() or not entry_word.get() or not entry_min.get():
+                messagebox.showwarning("警告", "请填写完整信息。")
+                return
+
+            result = {
+                "start": entry_start.get(),
+                "end": entry_end.get(),
+                "word": entry_word.get(),
+                "min": entry_min.get(),
+                "auto_enrich": auto_enrich_bool.get(),
+                "close": False
+            }
+            dialog.destroy()
+
+        def on_cancel():
+            nonlocal result
+            result["close"] = True
+            dialog.destroy()
+            
+        # 按钮框架
+        button_frame = ctk.CTkFrame(dialog)
+        button_frame.grid(row=3, column=0, columnspan=4, padx=10, pady=10, sticky="ew")
+        button_frame.grid_columnconfigure(0, weight=1)
+        button_frame.grid_columnconfigure(1, weight=1)
+        
+        ctk.CTkButton(button_frame, text="确认", command=on_confirm).grid(row=0, column=0, padx=10, pady=10, sticky="e")
+        ctk.CTkButton(button_frame, text="取消", command=on_cancel).grid(row=0, column=1, padx=10, pady=10, sticky="w")
+        
+        dialog.protocol("WM_DELETE_WINDOW", on_cancel)
+        dialog.transient(self.master)
+        dialog.grab_set()
+        dialog.wait_window(dialog)
+        return result
+    
+    def generate_chapter_batch(self ,i ,word, min, auto_enrich):
+        draft_interface_format = self.loaded_config["llm_configs"][self.prompt_draft_llm_var.get()]["interface_format"]
+        draft_api_key = self.loaded_config["llm_configs"][self.prompt_draft_llm_var.get()]["api_key"]
+        draft_base_url = self.loaded_config["llm_configs"][self.prompt_draft_llm_var.get()]["base_url"]
+        draft_model_name = self.loaded_config["llm_configs"][self.prompt_draft_llm_var.get()]["model_name"]
+        draft_temperature = self.loaded_config["llm_configs"][self.prompt_draft_llm_var.get()]["temperature"]
+        draft_max_tokens = self.loaded_config["llm_configs"][self.prompt_draft_llm_var.get()]["max_tokens"]
+        draft_timeout = self.loaded_config["llm_configs"][self.prompt_draft_llm_var.get()]["timeout"]
+        user_guidance = self.user_guide_text.get("0.0", "end").strip()  
+
+        char_inv = self.characters_involved_var.get().strip()
+        key_items = self.key_items_var.get().strip()
+        scene_loc = self.scene_location_var.get().strip()
+        time_constr = self.time_constraint_var.get().strip()
+
+        embedding_api_key = self.embedding_api_key_var.get().strip()
+        embedding_url = self.embedding_url_var.get().strip()
+        embedding_interface_format = self.embedding_interface_format_var.get().strip()
+        embedding_model_name = self.embedding_model_name_var.get().strip()
+        embedding_k = self.safe_get_int(self.embedding_retrieval_k_var, 4)
 
         prompt_text = build_chapter_prompt(
             api_key=draft_api_key,
@@ -577,7 +754,7 @@ def import_knowledge_handler(self):
             try:
                 emb_api_key = self.embedding_api_key_var.get().strip()
                 emb_url = self.embedding_url_var.get().strip()
-                emb_format = self.embedding_choice_var.get().strip() if hasattr(self, "embedding_choice_var") and self.embedding_choice_var.get().strip() in (self.loaded_config.get("embedding_configs",{}) or {}) else self.embedding_interface_format_var.get().strip()
+                emb_format = self.embedding_interface_format_var.get().strip()
                 emb_model = self.embedding_model_name_var.get().strip()
 
                 # 尝试不同编码读取文件
@@ -614,7 +791,7 @@ def import_knowledge_handler(self):
                         file_path=temp_path,
                         filepath=self.filepath_var.get().strip()
                     )
-                    self.safe_log("? 知识库文件导入完成。")
+                    self.safe_log("✅ 知识库文件导入完成。")
                 finally:
                     # 清理临时文件
                     try:
@@ -671,9 +848,4 @@ def show_plot_arcs_ui(self):
     text_area.pack(fill="both", expand=True, padx=10, pady=10)
     text_area.insert("0.0", arcs_text)
     text_area.configure(state="disabled")
-
-
-
-
-
 
