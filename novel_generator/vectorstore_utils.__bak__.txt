@@ -1,15 +1,10 @@
-#novel_generator/vectorstore_utils.py
+﻿#novel_generator/vectorstore_utils.py
 # -*- coding: utf-8 -*-
 # Vector store related operations (init, update, search, clear).
 import os
 import logging
 import traceback
-try:
-    import nltk
-    _HAVE_NLTK = True
-except Exception:
-    nltk = None
-    _HAVE_NLTK = False
+try:\n    import nltk\n    _HAVE_NLTK = True\nexcept Exception:\n    nltk = None\n    _HAVE_NLTK = False
 import numpy as np
 import re
 import ssl
@@ -146,39 +141,37 @@ def split_by_length(text: str, max_length: int = 500):
         start_idx = end_idx
     return segments
 
-
 def split_text_for_vectorstore(chapter_text: str, max_length: int = 500, similarity_threshold: float = 0.7):
-    # Split chapter text into segments for vector store insertion (NLTK optional).
-    if not chapter_text or not str(chapter_text).strip():
+    # Split chapter text into segments for vector store insertion.
+    # 浣跨敤 embedding 杩涜鏂囨湰鐩镐技搴﹁绠椼€?
+    if not chapter_text.strip():
         return []
-    def _regex_sentences(t: str):
-        parts = re.split(r"(?<=[。！？!\?；;：:])\s+|\n+", t)
-        return [p.strip() for p in parts if p and p.strip()]
-    sentences = None
-    if '_HAVE_NLTK' in globals() and _HAVE_NLTK:
-        try:
-            sentences = nltk.sent_tokenize(chapter_text)
-        except Exception:
-            sentences = _regex_sentences(chapter_text)
-    else:
-        sentences = _regex_sentences(chapter_text)
+    
+    # nltk.download('punkt', quiet=True)
+    # nltk.download('punkt_tab', quiet=True)
+    sentences = nltk.sent_tokenize(chapter_text)
     if not sentences:
         return []
+    
+    # 鐩存帴鎸夐暱搴﹀垎娈?涓嶅仛鐩镐技搴﹀悎骞?
     final_segments = []
     current_segment = []
     current_length = 0
+    
     for sentence in sentences:
-        L = len(sentence)
-        if current_length + L > max_length:
+        sentence_length = len(sentence)
+        if current_length + sentence_length > max_length:
             if current_segment:
                 final_segments.append(" ".join(current_segment))
             current_segment = [sentence]
-            current_length = L
+            current_length = sentence_length
         else:
             current_segment.append(sentence)
-            current_length += L
+            current_length += sentence_length
+    
     if current_segment:
         final_segments.append(" ".join(current_segment))
+    
     return final_segments
 
 def update_vector_store(embedding_adapter, new_chapter: str, filepath: str):

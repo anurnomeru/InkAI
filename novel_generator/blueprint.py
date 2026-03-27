@@ -1,7 +1,7 @@
-#novel_generator/blueprint.py
+﻿#novel_generator/blueprint.py
 # -*- coding: utf-8 -*-
 """
-章节蓝图生成（Chapter_blueprint_generate 及辅助函数）
+绔犺妭钃濆浘鐢熸垚锛圕hapter_blueprint_generate 鍙婅緟鍔╁嚱鏁帮級
 """
 import os
 import re
@@ -11,18 +11,18 @@ from llm_adapters import create_llm_adapter
 from prompt_definitions import chapter_blueprint_prompt, chunked_chapter_blueprint_prompt
 from utils import read_file, clear_file_content, save_string_to_txt
 logging.basicConfig(
-    filename='app.log',      # 日志文件名
-    filemode='a',            # 追加模式（'w' 会覆盖）
-    level=logging.INFO,      # 记录 INFO 及以上级别的日志
+    filename='app.log',      # 鏃ュ織鏂囦欢鍚?
+    filemode='a',            # 杩藉姞妯″紡锛?w' 浼氳鐩栵級
+    level=logging.INFO,      # 璁板綍 INFO 鍙婁互涓婄骇鍒殑鏃ュ織
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 def compute_chunk_size(number_of_chapters: int, max_tokens: int) -> int:
     """
-    基于“每章约100 tokens”的粗略估算，
-    再结合当前max_tokens，计算分块大小：
+    鍩轰簬鈥滄瘡绔犵害100 tokens鈥濈殑绮楃暐浼扮畻锛?
+    鍐嶇粨鍚堝綋鍓峬ax_tokens锛岃绠楀垎鍧楀ぇ灏忥細
       chunk_size = (floor(max_tokens/100/10)*10) - 10
-    并确保 chunk_size 不会小于1或大于实际章节数。
+    骞剁‘淇?chunk_size 涓嶄細灏忎簬1鎴栧ぇ浜庡疄闄呯珷鑺傛暟銆?
     """
     tokens_per_chapter = 200.0
     ratio = max_tokens / tokens_per_chapter
@@ -36,7 +36,7 @@ def compute_chunk_size(number_of_chapters: int, max_tokens: int) -> int:
 
 def limit_chapter_blueprint(blueprint_text: str, limit_chapters: int = 100) -> str:
     """
-    从已有章节目录中只取最近的 limit_chapters 章，以避免 prompt 超长。
+    浠庡凡鏈夌珷鑺傜洰褰曚腑鍙彇鏈€杩戠殑 limit_chapters 绔狅紝浠ラ伩鍏?prompt 瓒呴暱銆?
     """
     pattern = r"(第\s*\d+\s*章.*?)(?=第\s*\d+\s*章|$)"
     chapters = re.findall(pattern, blueprint_text, flags=re.DOTALL)
@@ -54,19 +54,19 @@ def Chapter_blueprint_generate(
     llm_model: str,
     filepath: str,
     number_of_chapters: int,
-    user_guidance: str = "",  # 新增参数
+    user_guidance: str = "",  # 鏂板鍙傛暟
     temperature: float = 0.7,
     max_tokens: int = 4096,
     timeout: int = 600
 ) -> None:
     """
-    若 Novel_directory.txt 已存在且内容非空，则表示可能是之前的部分生成结果；
-      解析其中已有的章节数，从下一个章节继续分块生成；
-      对于已有章节目录，传入时仅保留最近100章目录，避免prompt过长。
-    否则：
-      - 若章节数 <= chunk_size，直接一次性生成
-      - 若章节数 > chunk_size，进行分块生成
-    生成完成后输出至 Novel_directory.txt。
+    鑻?Novel_directory.txt 宸插瓨鍦ㄤ笖鍐呭闈炵┖锛屽垯琛ㄧず鍙兘鏄箣鍓嶇殑閮ㄥ垎鐢熸垚缁撴灉锛?
+      瑙ｆ瀽鍏朵腑宸叉湁鐨勭珷鑺傛暟锛屼粠涓嬩竴涓珷鑺傜户缁垎鍧楃敓鎴愶紱
+      瀵逛簬宸叉湁绔犺妭鐩綍锛屼紶鍏ユ椂浠呬繚鐣欐渶杩?00绔犵洰褰曪紝閬垮厤prompt杩囬暱銆?
+    鍚﹀垯锛?
+      - 鑻ョ珷鑺傛暟 <= chunk_size锛岀洿鎺ヤ竴娆℃€х敓鎴?
+      - 鑻ョ珷鑺傛暟 > chunk_size锛岃繘琛屽垎鍧楃敓鎴?
+    鐢熸垚瀹屾垚鍚庤緭鍑鸿嚦 Novel_directory.txt銆?
     """
     arch_file = os.path.join(filepath, "Novel_architecture.txt")
     if not os.path.exists(arch_file):
@@ -114,7 +114,7 @@ def Chapter_blueprint_generate(
                 number_of_chapters=number_of_chapters,
                 n=current_start,
                 m=current_end,
-                user_guidance=user_guidance  # 新增参数
+                user_guidance=user_guidance  # 鏂板鍙傛暟
             )
             logging.info(f"Generating chapters [{current_start}..{current_end}] in a chunk...")
             chunk_result = invoke_with_cleaning(llm_adapter, chunk_prompt)
@@ -135,7 +135,7 @@ def Chapter_blueprint_generate(
         prompt = chapter_blueprint_prompt.format(
             novel_architecture=architecture_text,
             number_of_chapters=number_of_chapters,
-            user_guidance=user_guidance  # 新增参数
+            user_guidance=user_guidance  # 鏂板鍙傛暟
         )
         blueprint_text = invoke_with_cleaning(llm_adapter, prompt)
         if not blueprint_text.strip():
@@ -159,7 +159,7 @@ def Chapter_blueprint_generate(
             number_of_chapters=number_of_chapters,
             n=current_start,
             m=current_end,
-            user_guidance=user_guidance  # 新增参数
+            user_guidance=user_guidance  # 鏂板鍙傛暟
         )
         logging.info(f"Generating chapters [{current_start}..{current_end}] in a chunk...")
         chunk_result = invoke_with_cleaning(llm_adapter, chunk_prompt)

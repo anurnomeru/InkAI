@@ -117,8 +117,9 @@ def enrich_chapter_text(
         max_tokens=max_tokens,
         timeout=timeout
     )
-    prompt = f"""以下章节文本较短，请在保持剧情连贯的前提下进行扩写，使其更充实，接近 {word_number} 字左右，仅给出最终文本，不要解释任何内容。：
-原内容：
+    prompt = f"""\
+以下是需要扩写的章节正文，请在保持风格与连贯性的前提下细化内容，使其更加完整，目标接近 {word_number} 字。直接返回扩写后的正文：
+原文：
 {chapter_text}
 """
     enriched_text = invoke_with_cleaning(llm_adapter, prompt)
