@@ -543,14 +543,13 @@ next_chapter_draft_prompt = """\
 鈹斺攢鈹€ 鍓嶆枃鎽樿锛?
     {global_summary}
 
-鈹斺攢鈹€ 鍓嶇珷缁撳熬娈碉細
-    {previous_chapter_excerpt}
 
 鈹斺攢鈹€ 鐢ㄦ埛鎸囧锛?
     {user_guidance}
 
 鈹斺攢鈹€ 瑙掕壊鐘舵€侊細
-    {character_state}\n
+    {character_state}
+\n
 褰撳墠绔犺妭淇℃伅锛?
 绗瑊novel_number}绔犮€妠chapter_title}銆嬶細
 鈹溾攢鈹€ 绔犺妭瀹氫綅锛歿chapter_role}
@@ -615,6 +614,9 @@ next_chapter_draft_prompt = """\
 - 浠呰繑鍥炵珷鑺傛鏂囨枃鏈紱
 - 涓嶄娇鐢ㄥ垎绔犺妭灏忔爣棰橈紱
 - 涓嶈浣跨敤markdown鏍煎紡銆?
+└── 前章结尾段：
+    {previous_chapter_excerpt}
+（请承接上文继续描写）
 """
 
 Character_Import_Prompt = """\
