@@ -849,3 +849,4 @@ def show_plot_arcs_ui(self):
     text_area.insert("0.0", arcs_text)
     text_area.configure(state="disabled")
 
+

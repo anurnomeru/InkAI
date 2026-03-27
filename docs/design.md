@@ -89,3 +89,13 @@ UI 文字与兼容：
 - Draft Variants 下拉增加“主稿/变体”分组与时间戳显示。
 - 变体对比视图（diff）与快速合并工具。
 - 可选策略：优先显示“最新变体”而非主稿（提供配置项切换）。
+
+## 实现细节（Implementation Notes）
+- 生成草稿时先弹出可编辑提示词对话框；确认后读取 Draft Variant Count。
+- 当计数 > 1：并发创建 N 个 worker（Python threading），分别请求 LLM 并将结果写入 <filepath>/chapters/_drafts/chapter_<n>_<k>.txt。
+- 并发完成后：
+  - 输出日志包含：开始并发生成 {N} 个草稿版本...、OK Variant k saved/FAIL Variant k failed。
+  - 刷新 Draft Variants 下拉，默认选最新项，并将其加载到编辑框。
+- 当计数 = 1：按原有单次生成流程，直接把结果加载到编辑框。
+- 所有请求参数（接口、模型、温度、超时、max_tokens）严格跟随 UI 与当前配置，不做代码侧覆盖。
+
