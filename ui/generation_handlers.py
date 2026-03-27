@@ -285,6 +285,7 @@ def generate_chapter_draft_ui(self):
 
             if variant_count and variant_count > 1:
                 self.safe_log(f"开始并发生成 {variant_count} 个草稿版本...")
+                self.safe_log(f"将启动 {variant_count} 个变体线程，超时时间 {timeout_val}s")
                 chapters_dir = os.path.join(filepath, "chapters")
                 drafts_dir = os.path.join(chapters_dir, "_drafts")
                 os.makedirs(drafts_dir, exist_ok=True)
@@ -294,8 +295,9 @@ def generate_chapter_draft_ui(self):
                     try:
                         self.safe_log(f"[Variant {k}] 启动")
                         target_path = os.path.join(drafts_dir, f"chapter_{chap_num}_{k}.txt")
+                        from novel_generator.chapter import generate_chapter_draft as _gen
                         self.safe_log(f"[Variant {k}] 调用LLM...")
-                        text = generate_chapter_draft(
+                        text = _gen(
                             api_key=api_key,
                             base_url=base_url,
                             model_name=model_name,
@@ -328,11 +330,15 @@ def generate_chapter_draft_ui(self):
                         results[k] = False
                         self.safe_log(f"FAIL Variant {k} failed: {str(e)}")
                 for k in range(1, variant_count+1):
+                    self.safe_log(f"准备启动线程 {k}/{variant_count}")
                     t = threading.Thread(target=worker, args=(k,), daemon=True)
                     threads.append(t)
                     t.start()
+                    self.safe_log(f"线程 {k} 已启动")
+                self.safe_log("等待所有变体线程完成...")
                 for t in threads:
                     t.join()
+                self.safe_log("所有变体线程已结束")
                 try:
                     ok_count = sum(1 for v in results.values() if v)
                     self.safe_log(f"并发完成：成功 {ok_count}/{variant_count}")
