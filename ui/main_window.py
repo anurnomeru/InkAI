@@ -1,4 +1,4 @@
-﻿# ui/main_window.py
+# ui/main_window.py
 
 # -*- coding: utf-8 -*-
 
@@ -896,7 +896,81 @@ class NovelGeneratorGUI:
 
 
 
-    def refresh_draft_variants_list(self):
+        def save_all_config(self):
+        try:
+            # Ensure base dicts
+            cfg = self.loaded_config if isinstance(self.loaded_config, dict) else {}
+            if not cfg: cfg = {}
+            cfg.setdefault('llm_configs', {})
+            cfg.setdefault('embedding_configs', {})
+            cfg.setdefault('choose_configs', {})
+            cfg.setdefault('other_params', {})
+
+            # LLM current
+            try:
+                llm_name = str(self.interface_config_var.get()).strip() if hasattr(self, 'interface_config_var') else 'Default'
+            except Exception:
+                llm_name = 'Default'
+            llm_item = {
+                'api_key': (self.api_key_var.get() if hasattr(self, 'api_key_var') else '').strip(),
+                'base_url': (self.base_url_var.get() if hasattr(self, 'base_url_var') else '').strip(),
+                'model_name': (self.model_name_var.get() if hasattr(self, 'model_name_var') else '').strip(),
+                'temperature': float(self.temperature_var.get()) if hasattr(self, 'temperature_var') else 0.7,
+                'max_tokens': int(self.max_tokens_var.get()) if hasattr(self, 'max_tokens_var') else 8192,
+                'timeout': self.safe_get_int(self.timeout_var, 600) if hasattr(self, 'timeout_var') else 600,
+                'interface_format': (self.interface_format_var.get() if hasattr(self, 'interface_format_var') else 'OpenAI').strip()
+            }
+            cfg['llm_configs'][llm_name] = llm_item
+            cfg['last_interface_format'] = llm_item['interface_format']
+
+            # Embedding current
+            emb_if = (self.embedding_interface_format_var.get().strip() if hasattr(self,'embedding_interface_format_var') else 'OpenAI')
+            emb_item = {
+                'api_key': (self.embedding_api_key_var.get() if hasattr(self,'embedding_api_key_var') else '').strip(),
+                'base_url': (self.embedding_url_var.get() if hasattr(self,'embedding_url_var') else '').strip(),
+                'model_name': (self.embedding_model_name_var.get() if hasattr(self,'embedding_model_name_var') else '').strip(),
+                'retrieval_k': self.safe_get_int(self.embedding_retrieval_k_var, 4) if hasattr(self,'embedding_retrieval_k_var') else 4,
+                'interface_format': emb_if
+            }
+            cfg['embedding_configs'][emb_if] = emb_item
+            cfg['last_embedding_interface_format'] = emb_if
+
+            # Choose (保持现状，不在此处强改)
+            # Other params
+            other = {
+                'topic': self.topic_text.get('0.0','end').strip() if hasattr(self,'topic_text') else '',
+                'genre': self.genre_var.get() if hasattr(self,'genre_var') else '',
+                'num_chapters': self.safe_get_int(self.num_chapters_var, 1) if hasattr(self,'num_chapters_var') else 1,
+                'word_number': self.safe_get_int(self.word_number_var, 10000) if hasattr(self,'word_number_var') else 10000,
+                'filepath': self.filepath_var.get() if hasattr(self,'filepath_var') else '',
+                'chapter_num': str(self.chapter_num_var.get()) if hasattr(self,'chapter_num_var') else '1',
+                'user_guidance': self.user_guide_text.get('0.0','end').strip() if hasattr(self,'user_guide_text') else '',
+                'characters_involved': self.characters_involved_var.get() if hasattr(self,'characters_involved_var') else '',
+                'key_items': self.key_items_var.get() if hasattr(self,'key_items_var') else '',
+                'scene_location': self.scene_location_var.get() if hasattr(self,'scene_location_var') else '',
+                'time_constraint': self.time_constraint_var.get() if hasattr(self,'time_constraint_var') else ''
+            }
+            cfg['other_params'] = other
+
+            # Persist
+            self.loaded_config = cfg
+            if save_config(cfg, self.config_file):
+                try:
+                    messagebox.showinfo('提示', '配置已保存至 config.json')
+                except Exception:
+                    pass
+                if hasattr(self,'safe_log'):
+                    self.safe_log('配置已保存。')
+            else:
+                try:
+                    messagebox.showerror('错误', '保存配置失败。')
+                except Exception:
+                    pass
+        except Exception:
+            try:
+                messagebox.showerror('错误', '保存配置时出现异常。')
+            except Exception:
+                passdef refresh_draft_variants_list(self):
         try:
             filepath = self.filepath_var.get().strip()
             chap = str(self.chapter_num_var.get()).strip()

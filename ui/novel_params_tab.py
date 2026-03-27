@@ -1,4 +1,4 @@
-﻿# ui/novel_params_tab.py
+# ui/novel_params_tab.py
 
 # -*- coding: utf-8 -*-
 
@@ -227,7 +227,7 @@ def build_optional_buttons_area(self, start_row=2):
 
     self.optional_btn_frame.grid(row=start_row, column=0, sticky="ew", padx=5, pady=5)
 
-    self.optional_btn_frame.columnconfigure((0, 1, 2, 3, 4), weight=1)
+    self.optional_btn_frame.columnconfigure((0, 1, 2, 3, 4, 5), weight=1)
 
 
 
@@ -290,6 +290,12 @@ def build_optional_buttons_area(self, start_row=2):
     )
 
     self.role_library_btn.grid(row=0, column=4, padx=5, pady=5, sticky="ew")
+    # 全局保存配置按钮（公共入口）
+    self.btn_save_all_config = ctk.CTkButton(
+        self.optional_btn_frame, text=t("保存配置"), command=self.save_all_config,
+        font=("Microsoft YaHei", 12), width=100
+    )
+    self.btn_save_all_config.grid(row=0, column=5, padx=5, pady=5, sticky="ew")
 
 
 
