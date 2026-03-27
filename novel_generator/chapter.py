@@ -466,7 +466,13 @@ def build_chapter_prompt(
                     current_chapter_text = read_file(current_chapter_file)
                 except Exception:
                     current_chapter_text = ''
-                context = , exclude_text=current_chapter_text
+                context = get_relevant_context_from_vector_store(
+                    embedding_adapter=embedding_adapter,
+                    query=group,
+                    filepath=filepath,
+                    k=actual_k,
+                    exclude_text=current_chapter_text
+                )
                 if context:
                     if any(kw in group.lower() for kw in ["技法", "手法", "模板"]):
                         all_contexts.append(f"[TECHNIQUE] {context}")
