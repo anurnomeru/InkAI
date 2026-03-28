@@ -148,3 +148,5 @@ zstandard==0.24.0
 streamlit>=1.36.0
 plotly>=5.20.0
 umap-learn>=0.5.5 ; python_version>='3.9'
+
+pandas>=2.2.3
