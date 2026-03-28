@@ -48,16 +48,16 @@ def clear_vector_store(filepath: str, progress_cb=None) -> bool:
             pass
     import shutil, stat
     store_dir = get_vectorstore_dir(filepath)
-    logging.info(f"[Vector] clear: target={store_dir}"); _progress(f'[??] ??: {store_dir}')
+    logging.info(f"[Vector] clear: target={store_dir}"); _progress(f'[向量] 目标路径: {store_dir}')
     if not os.path.exists(store_dir):
-        logging.info("[Vector] clear: no vectorstore directory; nothing to do"); _progress('[??] ???????????')
+        logging.info("[Vector] clear: no vectorstore directory; nothing to do"); _progress('[向量] 向量库不存在，无需清理')
         return False
     try:
         files_cnt = 0
         dirs_cnt = 0
         for _root, dirs, files in os.walk(store_dir):
             files_cnt += len(files); dirs_cnt += len(dirs)
-        logging.info(f"[Vector] clear: removing {files_cnt} files in {dirs_cnt} dirs ?"); _progress(f'[??] ???: ?? {files_cnt} ? / ?? {dirs_cnt} ?')
+        logging.info(f"[Vector] clear: removing {files_cnt} files in {dirs_cnt} dirs"); _progress(f'[向量] 预删除统计: ?? {files_cnt} ? / ?? {dirs_cnt} ?')
         t0 = time.perf_counter()
         def _onerror(func, path, exc_info):
             try:
@@ -67,10 +67,10 @@ def clear_vector_store(filepath: str, progress_cb=None) -> bool:
                 logging.warning(f"[Vector] clear: onerror path={path} err={ee}")
         shutil.rmtree(store_dir, onerror=_onerror)
         dt = time.perf_counter() - t0
-        logging.info(f"[Vector] clear: removed directory in {dt:.2f}s"); _progress(f'[??] ?????? {dt:.2f}s')
+        logging.info(f"[Vector] clear: removed directory in {dt:.2f}s"); _progress(f'[向量] 已清空，用时 {dt:.2f}s')
         return True
     except Exception as e:
-        logging.error(f"[Vector] clear: failed err={e}"); _progress(f'[??] ????: {e}')
+        logging.error(f"[Vector] clear: failed err={e}"); _progress(f'[向量] 失败: {e}')
         traceback.print_exc()
         return False
 
@@ -103,7 +103,7 @@ def init_vector_store(embedding_adapter, texts, filepath: str):
                 )
                 return res
         chroma_embedding = LCEmbeddingWrapper()
-        _progress(f'[??] ??????...')
+        _progress(f'[向量] 正在初始化 Chroma 并写入首批文档...')
         vectorstore = Chroma.from_documents(
             documents,
             embedding=chroma_embedding,
@@ -142,7 +142,7 @@ def init_vector_store(embedding_adapter, texts, filepath: str):
                 return res
 
         chroma_embedding = LCEmbeddingWrapper()
-        _progress(f'[??] ??????...')
+        _progress(f'[向量] 正在初始化 Chroma 并写入首批文档...')
         vectorstore = Chroma.from_documents(
             documents,
             embedding=chroma_embedding,
@@ -374,7 +374,7 @@ def rebuild_vector_store_from_chapters(embedding_adapter, filepath: str, progres
         # Create store with first chunk to avoid too large single call
         first_chunk = all_segments[:200]
         rest = all_segments[200:]
-        _progress(f'[??] ??????...')
+        _progress(f'[向量] 正在初始化 Chroma 并写入首批文档...')
         vectorstore = Chroma.from_documents(
             first_chunk,
             embedding=chroma_embedding,
@@ -384,7 +384,7 @@ def rebuild_vector_store_from_chapters(embedding_adapter, filepath: str, progres
         )
         if rest:
             vectorstore.add_documents(rest)
-            _progress(f'[??] ????????{len(all_docs)}')
+            _progress(f'[向量] 已写入全部文档，共 {len(all_docs)} 段')
         logging.info(f"Full vector store rebuilt from {len(chapter_files)} chapters, total segments: {len(all_segments)}")
         return True
     except Exception as e:
@@ -462,11 +462,17 @@ def load_vector_store(embedding_adapter, filepath: str):
         return None
 
 
-def rebuild_vector_store_from_chapters(embedding_adapter, filepath: str) -> bool:  # type: ignore[override]
+def rebuild_vector_store_from_chapters(embedding_adapter, filepath: str, progress_cb=None) -> bool:  # type: ignore[override]
     """Rebuild the vector store from all chapter_*.txt and write manifest.
     Adds metadata per doc: chapter, chapter_version=1, segment_idx, active=True.
     Only runs when store missing or empty.
     """
+    def _progress(msg):
+        try:
+            if progress_cb:
+                progress_cb(str(msg))
+        except Exception:
+            pass
     try:
         store_dir = get_vectorstore_dir(filepath)
         # Only rebuild when empty / missing
@@ -539,7 +545,7 @@ def rebuild_vector_store_from_chapters(embedding_adapter, filepath: str) -> bool
         os.makedirs(store_dir, exist_ok=True)
         first_chunk = all_docs[:200]
         rest = all_docs[200:]
-        _progress(f'[??] ??????...')
+        _progress(f'[向量] 正在初始化 Chroma 并写入首批文档...')
         vectorstore = Chroma.from_documents(
             first_chunk,
             embedding=chroma_embedding,
@@ -549,9 +555,9 @@ def rebuild_vector_store_from_chapters(embedding_adapter, filepath: str) -> bool
         )
         if rest:
             vectorstore.add_documents(rest)
-            _progress(f'[??] ????????{len(all_docs)}')
+            _progress(f'[向量] 已写入全部文档，共 {len(all_docs)} 段')
         save_manifest(manifest, filepath)
-        _progress('[??] manifest ????')
+        # manifest updated
         logging.info(
             f"Full vector store rebuilt from {len(chapter_files)} chapters, total segments: {len(all_docs)}"
         )
@@ -609,7 +615,7 @@ def index_chapter_version(embedding_adapter, chapter_number: int, chapter_text: 
             manifest["chapters"] = {}
         manifest["chapters"][chap_key] = {"current_version": int(new_ver)}
         save_manifest(manifest, filepath)
-        _progress('[??] manifest ????')
+        # manifest updated
         return True
     except Exception as e:
         logging.error(f"Index chapter version failed: {e}")
@@ -704,7 +710,7 @@ def index_chapter_version(embedding_adapter, chapter_number: int, chapter_text: 
             manifest['chapters'] = {}
         manifest['chapters'][chap_key] = {'current_version': int(new_ver)}
         save_manifest(manifest, filepath)
-        _progress('[??] manifest ????')
+        # manifest updated
         return True
     except Exception as e:
         logging.error(f"Index chapter version failed: {e}")
@@ -712,5 +718,8 @@ def index_chapter_version(embedding_adapter, chapter_number: int, chapter_text: 
         return False
 
 # ===== end overrides =====
+
+
+
 
 

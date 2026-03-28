@@ -876,8 +876,6 @@ def clear_vectorstore_handler(self):
     if not filepath:
         messagebox.showwarning("警告", "请先配置保存文件路径。")
         return
-
-    # UI 线程做确认；耗时操作放后台，避免卡死
     first_confirm = messagebox.askyesno("警告", "确定要清空本地向量库吗？此操作不可恢复！")
     if not first_confirm:
         try:
@@ -892,7 +890,6 @@ def clear_vectorstore_handler(self):
         except Exception:
             pass
         return
-
     def _task():
         import time
         t0 = time.perf_counter()
@@ -904,17 +901,20 @@ def clear_vectorstore_handler(self):
                     self.disable_button_safe(self.btn_clear_vectorstore_chapters)
             except Exception:
                 pass
-
-            self.safe_log(f'开始清空向量库: path={filepath}')
+            try:
+                self.safe_log(f'开始清空向量库: path={filepath}')
+            except Exception:
+                pass
             from novel_generator.vectorstore_utils import clear_vector_store
-            try:\n            ok = clear_vector_store(filepath, progress_cb=lambda m: self.safe_log(str(m)))\n            except TypeError:\n                ok = clear_vector_store(filepath)
+            try:
+                ok = clear_vector_store(filepath, progress_cb=lambda m: self.safe_log(str(m)))
+            except TypeError:
+                ok = clear_vector_store(filepath)
             dt = time.perf_counter() - t0
             if ok:
                 self.safe_log(f'✅ 已清空向量库（耗时 {dt:.2f}s）')
             else:
                 self.safe_log('⚠️ 清空向量库未成功或目录不存在')
-
-            # 清空后仅切换按钮为“重建向量库”，不自动重建
             try:
                 self.master.after(0, getattr(self, 'update_vectorstore_button', lambda: None))
             except Exception:
@@ -931,7 +931,6 @@ def clear_vectorstore_handler(self):
                     self.enable_button_safe(self.btn_clear_vectorstore_chapters)
             except Exception:
                 pass
-
     try:
         import threading
         thread = threading.Thread(target=_task, daemon=True)
@@ -943,6 +942,7 @@ def clear_vectorstore_handler(self):
         except Exception:
             pass
         messagebox.showerror("错误", f"线程启动失败: {str(e)}")
+
 def show_plot_arcs_ui(self):
     filepath = self.filepath_var.get().strip()
     if not filepath:
@@ -971,7 +971,6 @@ def rebuild_full_vectorstore_ui(self):
     if not filepath:
         messagebox.showwarning("警告", "请先配置保存文件路径。")
         return
-
     def _task():
         import time
         t0 = time.perf_counter()
@@ -984,7 +983,7 @@ def rebuild_full_vectorstore_ui(self):
                     self.disable_button_safe(self.btn_clear_vectorstore_chapters)
             except Exception:
                 pass
-
+            # 若非空则跳过
             try:
                 from novel_generator.vectorstore_utils import vector_store_is_empty
                 empty = vector_store_is_empty(filepath)
@@ -993,14 +992,12 @@ def rebuild_full_vectorstore_ui(self):
             if not empty:
                 self.safe_log('向量库已存在，无需重建。如需重建请先清空。')
                 return
-
             self.safe_log('开始全量重建向量库...')
-            # 记录参数，便于排查
+            # 记录参数
             try:
                 self.safe_log(f'Embedding: IF={self.embedding_interface_format_var.get().strip()} MODEL={self.embedding_model_name_var.get().strip()} URL={self.embedding_url_var.get().strip()}')
             except Exception:
                 pass
-
             from embedding_adapters import create_embedding_adapter
             adapter = create_embedding_adapter(
                 self.embedding_interface_format_var.get().strip(),
@@ -1010,12 +1007,15 @@ def rebuild_full_vectorstore_ui(self):
             )
             from novel_generator.vectorstore_utils import rebuild_vector_store_from_chapters as _rebuild
             t1 = time.perf_counter()
-            try:\n            ok = _rebuild(adapter, filepath, progress_cb=lambda m: self.safe_log(str(m)))\n            except TypeError:\n                ok = _rebuild(adapter, filepath)
+            try:
+                ok = _rebuild(adapter, filepath, progress_cb=lambda m: self.safe_log(str(m)))
+            except TypeError:
+                ok = _rebuild(adapter, filepath)
             dt = time.perf_counter() - t1
             if ok:
-                self.safe_log(f'✅ 向量库已全量重建完成（耗时 {dt:.2f}s）。')
+                self.safe_log(f"✅ 向量库已全量重建完成（耗时 {dt:.2f}s）。")
             else:
-                self.safe_log('⚠️ 无需重建或无可用章节。')
+                self.safe_log('⚠️ 重建未执行（向量库非空或无有效章节）')
         except Exception:
             self.handle_exception('检查/重建向量库时出错')
         finally:
@@ -1030,7 +1030,6 @@ def rebuild_full_vectorstore_ui(self):
                     self.enable_button_safe(self.btn_clear_vectorstore_chapters)
             except Exception:
                 pass
-
     try:
         import threading
         threading.Thread(target=_task, daemon=True).start()
@@ -1041,5 +1040,3 @@ def rebuild_full_vectorstore_ui(self):
         except Exception:
             pass
         messagebox.showerror("错误", f"线程启动失败: {str(e)}")
-
-
