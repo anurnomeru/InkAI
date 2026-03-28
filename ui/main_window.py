@@ -616,7 +616,7 @@ class NovelGeneratorGUI:
             for b in btns:
                 try:
                     if empty:
-                        b.configure(text=t('重建向量库'), fg_color=None, command=self.rebuild_full_vectorstore_ui)
+                        b.configure(text=t('重建向量库'), command=self.rebuild_full_vectorstore_ui)
                     else:
                         b.configure(text=t('清空向量库'), fg_color='red', command=self.clear_vectorstore_handler)
                 except Exception:
@@ -1183,6 +1183,7 @@ class NovelGeneratorGUI:
   
   
   
+
 
 
 
