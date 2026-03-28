@@ -882,6 +882,10 @@ def clear_vectorstore_handler(self):
         if second_confirm:
             if clear_vector_store(filepath):
                 self.log("已清空向量库。")
+                try:
+                    self.master.after(0, getattr(self, 'update_vectorstore_button', lambda: None))
+                except Exception:
+                    pass
             else:
                 self.log(f"未能清空向量库，请关闭程序后手动删除 {filepath} 下的 vectorstore 文件夹。")
 
@@ -894,6 +898,10 @@ def clear_vectorstore_handler(self):
                     from novel_generator.vectorstore_utils import rebuild_vector_store_from_chapters as _rebuild
                     if _rebuild(adapter, filepath):
                         self.safe_log('✅ 向量库已全量重建完成。')
+                        try:
+                            self.master.after(0, getattr(self, 'update_vectorstore_button', lambda: None))
+                        except Exception:
+                            pass
                     else:
                         self.safe_log('⚠️ 无需重建或无可用章节。')
             except Exception:
@@ -920,4 +928,3 @@ def show_plot_arcs_ui(self):
     text_area.pack(fill="both", expand=True, padx=10, pady=10)
     text_area.insert("0.0", arcs_text)
     text_area.configure(state="disabled")
-

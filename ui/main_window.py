@@ -581,6 +581,33 @@ class NovelGeneratorGUI:
             _apply(getattr(self, "finalized_hint_label_params", None), finalized)
         except Exception:
             pass
+    
+    def update_vectorstore_button(self):
+        try:
+            if not hasattr(self, 'btn_clear_vectorstore') or self.btn_clear_vectorstore is None:
+                return
+            fp = (self.filepath_var.get() or '').strip() if hasattr(self, 'filepath_var') else ''
+            if not fp:
+                try:
+                    self.btn_clear_vectorstore.configure(text=t('清空向量库'), fg_color='red', command=self.clear_vectorstore_handler)
+                except Exception:
+                    pass
+                return
+            from novel_generator.vectorstore_utils import vector_store_is_empty
+            empty = vector_store_is_empty(fp)
+            if empty:
+                try:
+                    self.btn_clear_vectorstore.configure(text=t('重建向量库'), fg_color=None, command=self.rebuild_full_vectorstore_ui)
+                except Exception:
+                    pass
+            else:
+                try:
+                    self.btn_clear_vectorstore.configure(text=t('清空向量库'), fg_color='red', command=self.clear_vectorstore_handler)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
     def test_llm_config(self):  
   
         """  
@@ -1139,3 +1166,4 @@ class NovelGeneratorGUI:
   
   
   
+
