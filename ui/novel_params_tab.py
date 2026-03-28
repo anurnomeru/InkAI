@@ -262,7 +262,7 @@ def build_optional_buttons_area(self, start_row=2):
 
     self.plot_arcs_btn = ctk.CTkButton(
 
-        self.optional_btn_frame, text=t("鏌ョ湅鍓ф儏瑕佺偣"), command=self.show_plot_arcs_ui,
+        self.optional_btn_frame, text=t("查看剧情要点"), command=self.show_plot_arcs_ui,
 
         font=("Microsoft YaHei", 12), width=100
 
@@ -318,6 +318,7 @@ def create_label_with_help_for_novel_params(self, parent, label_text, tooltip_ke
     btn.pack(side="left", padx=3)
 
     return frame
+
 
 
 
