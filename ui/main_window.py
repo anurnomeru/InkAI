@@ -1,4 +1,4 @@
-﻿# ui/main_window.py  
+# ui/main_window.py  
   
 # -*- coding: utf-8 -*-  
   
@@ -82,7 +82,7 @@ from ui.other_settings import build_other_settings_tab
   
 class NovelGeneratorGUI:  
   
-    """主界面类"""  
+    """��������"""  
   
     def __init__(self, master):  
   
@@ -104,7 +104,7 @@ class NovelGeneratorGUI:
   
   
   
-        # --------------- 配置文件路径 ---------------  
+        # --------------- �����ļ�·�� ---------------  
   
         self.config_file = "config.json"  
   
@@ -178,7 +178,7 @@ class NovelGeneratorGUI:
   
   
   
-        # PenBo 澧炲姞浠ｇ悊鍔熻兘鏀寔  
+        # PenBo 增加代理功能支持  
   
         proxy_url = self.loaded_config["proxy_setting"]["proxy_url"]  
   
@@ -202,7 +202,7 @@ class NovelGeneratorGUI:
   
   
   
-        # -- LLM閫氱敤参数 --  
+        # -- LLM通用���� --  
   
         # self.llm_conf_name = next(iter(self.loaded_config["llm_configs"]))  
   
@@ -228,7 +228,7 @@ class NovelGeneratorGUI:
   
   
   
-        # -- Embedding鐩稿叧 --  
+        # -- Embedding相关 --  
   
         self.embedding_interface_format_var = ctk.StringVar(value=last_embedding)  
   
@@ -244,7 +244,7 @@ class NovelGeneratorGUI:
   
   
   
-        # -- 生成配置鐩稿叧 --  
+        # -- ��������相关 --  
   
         self.architecture_llm_var = ctk.StringVar(value=choose_configs.get("architecture_llm", "DeepSeek"))  
   
@@ -266,7 +266,7 @@ class NovelGeneratorGUI:
   
   
   
-        # -- 小说参数鐩稿叧 --  
+        # -- С˵����相关 --  
   
         if self.loaded_config and "other_params" in self.loaded_config:  
   
@@ -274,7 +274,7 @@ class NovelGeneratorGUI:
   
             self.topic_default = op.get("topic", "")  
   
-            self.genre_var = ctk.StringVar(value=op.get("genre", "鐜勫够"))  
+            self.genre_var = ctk.StringVar(value=op.get("genre", "玄幻"))  
   
             self.num_chapters_var = ctk.StringVar(value=str(op.get("num_chapters", 10)))  
   
@@ -309,7 +309,7 @@ class NovelGeneratorGUI:
   
             self.topic_default = ""  
   
-            self.genre_var = ctk.StringVar(value="鐜勫够")  
+            self.genre_var = ctk.StringVar(value="玄幻")  
   
             self.num_chapters_var = ctk.StringVar(value="10")  
   
@@ -332,7 +332,7 @@ class NovelGeneratorGUI:
   
   
   
-        # --------------- 鏁翠綋Tab甯冨眬 ---------------  
+        # --------------- 整体Tab布局 ---------------  
   
                 # --- Choose configs StringVars (create if missing) ---  
         try:  
@@ -351,7 +351,7 @@ class NovelGeneratorGUI:
   
   
   
-        # 鍒涘缓鍚勪釜标签页?  
+        # 创建各个��ǩҳ?  
   
         build_main_tab(self)  
   
@@ -374,7 +374,7 @@ class NovelGeneratorGUI:
         build_other_settings_tab(self)  
   
         try:  
-            # 章节号变更 -> 刷新变体并加载对应内容  
+            # �½ںű�� -> ˢ�±��岢���ض�Ӧ����  
             self.chapter_num_var.trace_add("write", lambda *a: self._on_chapter_num_changed())  
         except Exception:  
             pass  
@@ -383,7 +383,7 @@ class NovelGeneratorGUI:
         except Exception:
             pass
         try:  
-            # 保存路径变更 -> 重新计算最新章节  
+            # ����·����� -> ���¼��������½�  
             self.filepath_var.trace_add("write", lambda *a: self._on_filepath_changed())  
         except Exception:  
             pass  
@@ -392,7 +392,7 @@ class NovelGeneratorGUI:
         except Exception:
             pass  
         try:  
-            # 首次进入根据保存路径下 chapters/ 自动选中最新章节  
+            # �״ν�����ݱ���·���� chapters/ �Զ�ѡ�������½�  
             self.master.after(0, self._apply_latest_chapter_on_start)  
         except Exception:  
             pass  
@@ -401,13 +401,13 @@ class NovelGeneratorGUI:
   
   
   
-    # ----------------- 閫氱敤杈呭姪鍑芥暟 -----------------  
+    # ----------------- 通用辅助函数 -----------------  
   
     def show_tooltip(self, key: str):  
   
-        info_text = tooltips.get(key, "暂无说明")  
+        info_text = tooltips.get(key, "����˵��")  
   
-        messagebox.showinfo("参数说明", info_text)  
+        messagebox.showinfo("����˵��", info_text)  
   
   
   
@@ -498,7 +498,7 @@ class NovelGeneratorGUI:
                         if num.isdigit():  
                             latest = max(latest, int(num))  
             if latest > 0:  
-                # 设置章节号并触发联动  
+                # �����½ںŲ���������  
                 if str(self.chapter_num_var.get()).strip() != str(latest):  
                     self.chapter_num_var.set(str(latest))  
                 else:  
@@ -514,14 +514,14 @@ class NovelGeneratorGUI:
   
     def _on_chapter_num_changed(self):  
         try:  
-            # 刷新下拉选单  
+            # ˢ������ѡ��  
             if hasattr(self, 'refresh_draft_variants_list'):  
                 self.refresh_draft_variants_list()  
             chap = str(self.chapter_num_var.get()).strip()  
             fp = (self.filepath_var.get() or '').strip()  
             if not (chap and fp):  
                 return  
-            # 优先主稿，其次最新变体  
+            # �������壬������±���  
             main_name = f'chapter_{chap}.txt'  
             main_path = os.path.join(fp, 'chapters', main_name)  
             selected = None  
@@ -539,9 +539,9 @@ class NovelGeneratorGUI:
                     self.draft_variant_select_var.set(selected)  
                 except Exception:  
                     pass  
-                # 加载到编辑区  
+                # ���ص��༭��  
                 if selected.count('_') == 1:  
-                    full = os.path.join(fp, 'chapters', selected)  # 主稿  
+                    full = os.path.join(fp, 'chapters', selected)  # ����  
                 else:  
                     full = os.path.join(fp, 'chapters', '_drafts', selected)  
                 self._load_text_and_show(full)  
@@ -557,7 +557,7 @@ class NovelGeneratorGUI:
             def _apply(label, finalized):
                 try:
                     if label:
-                        label.configure(text=("已定稿" if finalized else ""))
+                        label.configure(text=("�Ѷ���" if finalized else ""))
                 except Exception:
                     pass
             if not (hasattr(self, "finalized_hint_label") or hasattr(self, "finalized_hint_label_params")):
@@ -589,7 +589,7 @@ class NovelGeneratorGUI:
             fp = (self.filepath_var.get() or '').strip() if hasattr(self, 'filepath_var') else ''
             if not fp:
                 try:
-                    self.btn_clear_vectorstore.configure(text=t('清空向量库'), fg_color='red', command=self.clear_vectorstore_handler)
+                    self.btn_clear_vectorstore.configure(text=t('���������'), fg_color='red', command=self.clear_vectorstore_handler)
                 except Exception:
                     pass
                 return
@@ -597,12 +597,12 @@ class NovelGeneratorGUI:
             empty = vector_store_is_empty(fp)
             if empty:
                 try:
-                    self.btn_clear_vectorstore.configure(text=t('重建向量库'), fg_color=None, command=self.rebuild_full_vectorstore_ui)
+                    self.btn_clear_vectorstore.configure(text=t('�ؽ�������'), fg_color=None, command=self.rebuild_full_vectorstore_ui)
                 except Exception:
                     pass
             else:
                 try:
-                    self.btn_clear_vectorstore.configure(text=t('清空向量库'), fg_color='red', command=self.clear_vectorstore_handler)
+                    self.btn_clear_vectorstore.configure(text=t('���������'), fg_color='red', command=self.clear_vectorstore_handler)
                 except Exception:
                     pass
         except Exception:
@@ -612,7 +612,7 @@ class NovelGeneratorGUI:
   
         """  
   
-        娴嬭瘯褰撳墠鐨凩LM配置鏄惁敤  
+        测试当前的LLM����是否�用  
   
         """  
   
@@ -660,7 +660,7 @@ class NovelGeneratorGUI:
   
         """  
   
-        娴嬭瘯褰撳墠鐨凟mbedding配置鏄惁敤  
+        测试当前的Embedding����是否�用  
   
         """  
   
@@ -704,21 +704,21 @@ class NovelGeneratorGUI:
   
     def show_character_import_window(self):  
   
-        """鏄剧ず角色导入绐楀彛"""  
+        """显示��ɫ����窗口"""  
   
         import_window = ctk.CTkToplevel(self.master)  
   
-        import_window.title("导入角色淇℃伅")  
+        import_window.title("�����ɫ信息")  
   
         import_window.geometry("600x500")  
   
-        import_window.transient(self.master)  # 璁剧疆涓虹埗绐楀彛鐨勪复鏃剁獥?  
+        import_window.transient(self.master)  # 设置为父窗口的临时窗?  
   
-        import_window.grab_set()  # 淇濇寔绐楀彛鍦ㄩ《灞?  
+        import_window.grab_set()  # 保持窗口在顶�?  
   
           
   
-        # 涓诲鍣?  
+        # 主容�?  
   
         main_frame = ctk.CTkFrame(import_window)  
   
@@ -726,7 +726,7 @@ class NovelGeneratorGUI:
   
           
   
-        # 婊氬姩瀹瑰櫒  
+        # 滚动容器  
   
         scroll_frame = ctk.CTkScrollableFrame(main_frame)  
   
@@ -734,19 +734,19 @@ class NovelGeneratorGUI:
   
           
   
-        # 鑾峰彇角色库撹矾寰?  
+        # 获取��ɫ��路�?  
   
-        role_lib_path = os.path.join(self.filepath_var.get().strip(), "角色库")  
+        role_lib_path = os.path.join(self.filepath_var.get().strip(), "��ɫ��")  
   
-        self.selected_roles = []  # 瀛樺偍閫変腑鐨勮鑹插悕绉?  
+        self.selected_roles = []  # 存储选中的角色名�?  
   
           
   
-        # 鍔ㄦ€佸姞杞借鑹插垎绫?  
+        # 动态加载角色分�?  
   
         if os.path.exists(role_lib_path):  
   
-            # 配置缃戞牸甯冨眬参数  
+            # ����网格布局����  
   
             scroll_frame.columnconfigure(0, weight=1)  
   
@@ -762,7 +762,7 @@ class NovelGeneratorGUI:
   
                 if os.path.isdir(category_path):  
   
-                    # 鍒涘缓分类瀹瑰櫒  
+                    # 创建����容器  
   
                     category_frame = ctk.CTkFrame(scroll_frame)  
   
@@ -770,9 +770,9 @@ class NovelGeneratorGUI:
   
                       
   
-                    # 娣诲姞分类鏍囩  
+                    # 添加����标签  
   
-                    category_label = ctk.CTkLabel(category_frame, text=f"【{category}】",   
+                    category_label = ctk.CTkLabel(category_frame, text=f"��{category}��",   
   
                                                 font=("Microsoft YaHei", 12, "bold"))  
   
@@ -780,17 +780,17 @@ class NovelGeneratorGUI:
   
                       
   
-                    # 初始化栬鑹叉帓鍒楀弬鏁?  
+                    # ��ʼ���角色排列参�?  
   
                     role_count = 0  
   
                     row_num = 0  
   
-                    col_num = 1  # 浠庣1鍒楀紑濮嬶紙第鍒楁槸分类鏍囩：  
+                    col_num = 1  # 从第1列开始（��列是����标签��  
   
                       
   
-                    # 娣诲姞角色澶嶉€夋  
+                    # 添加��ɫ复选框  
   
                     for role_file in os.listdir(category_path):  
   
@@ -808,7 +808,7 @@ class NovelGeneratorGUI:
   
                                   
   
-                                # 鏇存柊琛屽垪浣嶇疆  
+                                # 更新行列位置  
   
                                 role_count += 1  
   
@@ -822,7 +822,7 @@ class NovelGeneratorGUI:
   
                       
   
-                    # 濡傛灉娌℃湁角色：岃皟鏁村垎绫绘爣绛惧崰婊℃暣琛?  
+                    # 如果没有��ɫ���调整分类标签占满整�?  
   
                     if role_count == 0:  
   
@@ -830,13 +830,13 @@ class NovelGeneratorGUI:
   
                       
   
-                    # 鏇存柊涓诲竷灞€鐨勮?  
+                    # 更新主布局的行?  
   
                     current_row += 1  
   
                       
   
-                    # 娣诲姞鍒嗛殧绾?  
+                    # 添加分隔�?  
   
                     separator = ctk.CTkFrame(scroll_frame, height=1, fg_color="gray")  
   
@@ -846,7 +846,7 @@ class NovelGeneratorGUI:
   
           
   
-        # 搴曢儴按钮妗嗘灦  
+        # 底部��ť框架  
   
         btn_frame = ctk.CTkFrame(main_frame)  
   
@@ -854,7 +854,7 @@ class NovelGeneratorGUI:
   
           
   
-        # 閫夋嫨按钮  
+        # 选择��ť  
   
         def confirm_selection():  
   
@@ -868,15 +868,15 @@ class NovelGeneratorGUI:
   
               
   
-        btn_confirm = ctk.CTkButton(btn_frame, text=t("閫夋嫨"), command=confirm_selection)  
+        btn_confirm = ctk.CTkButton(btn_frame, text=t("选择"), command=confirm_selection)  
   
         btn_confirm.pack(side="left", padx=20)  
   
           
   
-        # 取消按钮  
+        # ȡ����ť  
   
-        btn_cancel = ctk.CTkButton(btn_frame, text=t("取消"), command=import_window.destroy)  
+        btn_cancel = ctk.CTkButton(btn_frame, text=t("ȡ��"), command=import_window.destroy)  
   
         btn_cancel.pack(side="right", padx=20)  
   
@@ -889,19 +889,19 @@ class NovelGeneratorGUI:
                 from .role_library import RoleLibrary as _RL  
                 RoleLibrary = _RL  
             except Exception as e:  
-                messagebox.showerror(t("错误"), t("角色库模块加载失败：{err}").format(err=str(e)))  
+                messagebox.showerror(t("����"), t("��ɫ��ģ�����ʧ�ܣ�{err}").format(err=str(e)))  
                 return  
         save_path = self.filepath_var.get().strip()  
   
         if not save_path:  
   
-            messagebox.showwarning(t("警告"), t("请先配置保存文件路径"))  
+            messagebox.showwarning(t("����"), t("�������ñ����ļ�·��"))  
   
             return  
   
           
   
-        # 初始化朙LM閫傞厤鍣?  
+        # ��ʼ���LLM适配�?  
   
         llm_adapter = create_llm_adapter(  
   
@@ -923,7 +923,7 @@ class NovelGeneratorGUI:
   
           
   
-        # 浼犻€扡LM閫傞厤鍣ㄥ疄渚嬪埌角色库?  
+        # 传递LLM适配器实例到��ɫ��?  
   
         if hasattr(self, '_role_lib'):  
   
@@ -933,11 +933,11 @@ class NovelGeneratorGUI:
   
           
   
-        self._role_lib = RoleLibrary(self.master, save_path, llm_adapter)  # 鏂板参数  
+        self._role_lib = RoleLibrary(self.master, save_path, llm_adapter)  # 新增����  
   
   
   
-    # ----------------- 灏嗗鍏ョ殑鍚勬ā鍧楀嚱鏁扮洿鎺ヨ祴缁欑被鏂规硶 -----------------  
+    # ----------------- 将导入的各模块函数直接赋给类方法 -----------------  
   
     generate_novel_architecture_ui = generate_novel_architecture_ui  
   
@@ -954,6 +954,7 @@ class NovelGeneratorGUI:
     import_knowledge_handler = import_knowledge_handler  
   
     clear_vectorstore_handler = clear_vectorstore_handler  
+    show_plot_arcs_ui = show_plot_arcs_ui  
 
     rebuild_full_vectorstore_ui = rebuild_full_vectorstore_ui  
 
@@ -1166,4 +1167,5 @@ class NovelGeneratorGUI:
   
   
   
+
 
