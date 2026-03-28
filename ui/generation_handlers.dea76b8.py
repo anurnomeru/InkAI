@@ -181,10 +181,62 @@ def generate_chapter_draft_ui(self):
                 max_tokens=max_tokens,
                 timeout=timeout_val
             )
+            # 并发多版本草稿（当草稿版本数>1时，直接并发生成到 _drafts 并返回）
+            variant_count = 1
+            try:
+                variant_count = int(self.draft_variants_var.get().strip()) if hasattr(self, 'draft_variants_var') else 1
+            except Exception:
+                variant_count = 1
+            if variant_count and variant_count > 1:
+                self.safe_log(f"开始并发生成 {variant_count} 个草稿版本...")
+                chapters_dir = os.path.join(filepath, "chapters")
+                drafts_dir = os.path.join(chapters_dir, "_drafts")
+                os.makedirs(drafts_dir, exist_ok=True)
+                threads = []
+                def worker(k:int):
+                    try:
+                        target_path = os.path.join(drafts_dir, f"chapter_{chap_num}_{k}.txt")
+                        _ = generate_chapter_draft(
+                            api_key=api_key,
+                            base_url=base_url,
+                            model_name=model_name,
+                            filepath=filepath,
+                            novel_number=chap_num,
+                            word_number=word_number,
+                            temperature=temperature,
+                            user_guidance=user_guidance,
+                            characters_involved=char_inv,
+                            key_items=key_items,
+                            scene_location=scene_loc,
+                            time_constraint=time_constr,
+                            embedding_api_key=embedding_api_key,
+                            embedding_url=embedding_url,
+                            embedding_interface_format=embedding_interface_format,
+                            embedding_model_name=embedding_model_name,
+                            embedding_retrieval_k=embedding_k,
+                            interface_format=interface_format,
+                            max_tokens=max_tokens,
+                            timeout=timeout_val,
+                            custom_prompt_text=prompt_text,
+                            target_file=target_path
+                        )
+                    except Exception:
+                        pass
+                for k in range(1, variant_count+1):
+                    t = threading.Thread(target=worker, args=(k,), daemon=True)
+                    threads.append(t)
+                    t.start()
+                for t in threads:
+                    t.join()
+                try:
+                    self.master.after(0, self.refresh_draft_variants_list)
+                except Exception:
+                    pass
+                self.enable_button_safe(self.btn_generate_chapter)
+                return
             # 弹出可编辑提示词对话框，等待用户确认或取消
             result = {"prompt": None}
             event = threading.Event()
-            self.safe_log("显示提示词确认对话框...")
 
             def create_dialog():
                 dialog = ctk.CTkToplevel(self.master)
@@ -254,12 +306,10 @@ def generate_chapter_draft_ui(self):
                 button_frame.pack(pady=10)
                 def on_confirm():
                     result["prompt"] = text_box.get("1.0", "end").strip()
-                    self.safe_log("提示词已确认，开始生成...")
                     dialog.destroy()
                     event.set()
                 def on_cancel():
                     result["prompt"] = None
-                    self.safe_log("用户取消了提示词对话框。")
                     dialog.destroy()
                     event.set()
                 btn_confirm = ctk.CTkButton(button_frame, text="确认使用", font=("Microsoft YaHei", 12), command=on_confirm)
@@ -276,119 +326,31 @@ def generate_chapter_draft_ui(self):
                 self.safe_log("❌ 用户取消了草稿生成请求。")
                 return
 
-            # 根据并发设置生成一个或多个草稿版本（使用用户编辑后的提示词）
-            variant_count = 1
-            try:
-                variant_count = int(self.draft_variants_var.get().strip()) if hasattr(self, 'draft_variants_var') else 1
-            except Exception:
-                variant_count = 1
-
-            if variant_count and variant_count > 1:
-                self.safe_log(f"开始并发生成 {variant_count} 个草稿版本...")
-                self.safe_log(f"将启动 {variant_count} 个变体线程，超时时间 {timeout_val}s")
-                chapters_dir = os.path.join(filepath, "chapters")
-                drafts_dir = os.path.join(chapters_dir, "_drafts")
-                os.makedirs(drafts_dir, exist_ok=True)
-                results = {}
-                threads = []
-                def worker(k:int):
-                    try:
-                        self.safe_log(f"[Variant {k}] 启动")
-                        target_path = os.path.join(drafts_dir, f"chapter_{chap_num}_{k}.txt")
-                        from novel_generator.chapter import generate_chapter_draft as _gen
-                        self.safe_log(f"[Variant {k}] 调用LLM...")
-                        text = _gen(
-                            api_key=api_key,
-                            base_url=base_url,
-                            model_name=model_name,
-                            filepath=filepath,
-                            novel_number=chap_num,
-                            word_number=word_number,
-                            temperature=temperature,
-                            user_guidance=user_guidance,
-                            characters_involved=char_inv,
-                            key_items=key_items,
-                            scene_location=scene_loc,
-                            time_constraint=time_constr,
-                            embedding_api_key=embedding_api_key,
-                            embedding_url=embedding_url,
-                            embedding_interface_format=embedding_interface_format,
-                            embedding_model_name=embedding_model_name,
-                            embedding_retrieval_k=embedding_k,
-                            interface_format=interface_format,
-                            max_tokens=max_tokens,
-                            timeout=timeout_val,
-                            custom_prompt_text=edited_prompt,
-                            target_file=target_path
-                        )
-                        results[k] = bool(text and len(text.strip())>0)
-                        if results[k]:
-                            self.safe_log(f"OK Variant {k} -> {target_path}")
-                        else:
-                            self.safe_log(f"FAIL Variant {k} empty")
-                    except Exception as e:
-                        results[k] = False
-                        self.safe_log(f"FAIL Variant {k} failed: {str(e)}")
-                for k in range(1, variant_count+1):
-                    self.safe_log(f"准备启动线程 {k}/{variant_count}")
-                    t = threading.Thread(target=worker, args=(k,), daemon=True)
-                    threads.append(t)
-                    t.start()
-                    self.safe_log(f"线程 {k} 已启动")
-                self.safe_log("等待所有变体线程完成...")
-                for t in threads:
-                    t.join()
-                self.safe_log("所有变体线程已结束")
-                try:
-                    ok_count = sum(1 for v in results.values() if v)
-                    self.safe_log(f"并发完成：成功 {ok_count}/{variant_count}")
-                except Exception:
-                    pass
-                try:
-                    self.master.after(0, self.refresh_draft_variants_list)
-                except Exception:
-                    pass
-                # 尝试展示最后一个成功的变体内容
-                last_text = None
-                for k in range(variant_count, 0, -1):
-                    try:
-                        if results.get(k, False):
-                            p = os.path.join(drafts_dir, f"chapter_{chap_num}_{k}.txt")
-                            if os.path.exists(p):
-                                with open(p, 'r', encoding='utf-8', errors='ignore') as f:
-                                    last_text = f.read()
-                                    break
-                    except Exception:
-                        continue
-                if last_text:
-                    self.master.after(0, lambda: self.show_chapter_in_textbox(last_text))
-                return
-            else:
-                self.safe_log("开始生成章节草稿...")
-                from novel_generator.chapter import generate_chapter_draft
-                draft_text = generate_chapter_draft(
-                    api_key=api_key,
-                    base_url=base_url,
-                    model_name=model_name,
-                    filepath=filepath,
-                    novel_number=chap_num,
-                    word_number=word_number,
-                    temperature=temperature,
-                    user_guidance=user_guidance,
-                    characters_involved=char_inv,
-                    key_items=key_items,
-                    scene_location=scene_loc,
-                    time_constraint=time_constr,
-                    embedding_api_key=embedding_api_key,
-                    embedding_url=embedding_url,
-                    embedding_interface_format=embedding_interface_format,
-                    embedding_model_name=embedding_model_name,
-                    embedding_retrieval_k=embedding_k,
-                    interface_format=interface_format,
-                    max_tokens=max_tokens,
-                    timeout=timeout_val,
-                    custom_prompt_text=edited_prompt
-                )
+            self.safe_log("开始生成章节草稿...")
+            from novel_generator.chapter import generate_chapter_draft
+            draft_text = generate_chapter_draft(
+                api_key=api_key,
+                base_url=base_url,
+                model_name=model_name,
+                filepath=filepath,
+                novel_number=chap_num,
+                word_number=word_number,
+                temperature=temperature,
+                user_guidance=user_guidance,
+                characters_involved=char_inv,
+                key_items=key_items,
+                scene_location=scene_loc,
+                time_constraint=time_constr,
+                embedding_api_key=embedding_api_key,
+                embedding_url=embedding_url,
+                embedding_interface_format=embedding_interface_format,
+                embedding_model_name=embedding_model_name,
+                embedding_retrieval_k=embedding_k,
+                interface_format=interface_format,
+                max_tokens=max_tokens,
+                timeout=timeout_val,
+                custom_prompt_text=edited_prompt  # 使用用户编辑后的提示词
+            )
             if draft_text:
                 self.safe_log(f"✅ 第{chap_num}章草稿生成完成。请在左侧查看或编辑。")
                 self.master.after(0, lambda: self.show_chapter_in_textbox(draft_text))
@@ -886,7 +848,5 @@ def show_plot_arcs_ui(self):
     text_area.pack(fill="both", expand=True, padx=10, pady=10)
     text_area.insert("0.0", arcs_text)
     text_area.configure(state="disabled")
-
-
 
 

@@ -409,7 +409,10 @@ def build_chapter_prompt(
     previous_excerpt = ""
     for text in reversed(recent_texts):
         if text.strip():
-            previous_excerpt = text[-800:] if len(text) > 800 else text
+            try:
+                previous_excerpt = _extract_tail_excerpt(text, 3, 200)
+            except Exception:
+                previous_excerpt = text[-800:] if len(text) > 800 else text
             break
 
     # 知识库检索和处理
@@ -458,11 +461,17 @@ def build_chapter_prompt(
             actual_k = min(embedding_retrieval_k, max(1, collection_size))
             
             for group in keyword_groups:
+                current_chapter_file = os.path.join(filepath, 'chapters', f'chapter_{novel_number}.txt')
+                try:
+                    current_chapter_text = read_file(current_chapter_file)
+                except Exception:
+                    current_chapter_text = ''
                 context = get_relevant_context_from_vector_store(
                     embedding_adapter=embedding_adapter,
                     query=group,
                     filepath=filepath,
-                    k=actual_k
+                    k=actual_k,
+                    exclude_text=current_chapter_text
                 )
                 if context:
                     if any(kw in group.lower() for kw in ["技法", "手法", "模板"]):
@@ -618,6 +627,10 @@ def generate_chapter_draft(
     save_string_to_txt(chapter_content, chapter_file)
     logging.info(f"[Draft] Chapter {novel_number} generated as a draft.")
     return chapter_content
+
+
+
+
 
 
 
