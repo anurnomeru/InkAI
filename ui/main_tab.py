@@ -84,7 +84,14 @@ def build_left_layout(self):
     # 保存草稿按钮
     self.btn_save_main = ctk.CTkButton(header_frame, text=t("保存草稿"), command=self.save_main_editor_content, font=("Microsoft YaHei", 12))
     self.btn_save_main.grid(row=0, column=1, padx=5, pady=0, sticky="e")
-
+    # 已定稿提示标签
+    try:
+        self.finalized_hint_label
+    except Exception:
+        self.finalized_hint_label = None
+    if self.finalized_hint_label is None:
+        self.finalized_hint_label = ctk.CTkLabel(header_frame, text="", text_color="green", font=("Microsoft YaHei", 12))
+    self.finalized_hint_label.grid(row=0, column=2, padx=(10,0), pady=0, sticky="e")
 
 
     # 章节文本编辑妗?

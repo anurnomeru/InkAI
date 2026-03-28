@@ -5,9 +5,9 @@ import threading
 import tkinter as tk
 from tkinter import messagebox
 import customtkinter as ctk
-import traceback
-import glob
-from utils import read_file, save_string_to_txt, clear_file_content
+import json
+import hashlib
+from datetime import datetime
 from novel_generator import (
     Novel_architecture_generate,
     Chapter_blueprint_generate,
@@ -477,7 +477,28 @@ def finalize_chapter_ui(self):
                 timeout=timeout_val
             )
             self.safe_log(f"✅ 第{chap_num}章定稿完成（已更新前文摘要、角色状态、向量库）。")
-
+            # 更新 chapters/status.json 标记已定稿
+            try:
+                chapters_dir = os.path.join(filepath, "chapters")
+                status_file = os.path.join(chapters_dir, "status.json")
+                try:
+                    raw = read_file(status_file)
+                    status = json.loads(raw) if raw.strip() else {}
+                except Exception:
+                    status = {}
+                text_hash = hashlib.sha1(edited_text.encode("utf-8", errors="ignore")).hexdigest()
+                status[str(chap_num)] = {
+                    "finalized": True,
+                    "finalized_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "text_sha1": text_hash
+                }
+                save_data_to_json(status, status_file)
+                try:
+                    self.master.after(0, getattr(self, "update_finalized_status_label", lambda: None))
+                except Exception:
+                    pass
+            except Exception:
+                pass
             final_text = read_file(chapter_file)
             self.master.after(0, lambda: self.show_chapter_in_textbox(final_text))
         except Exception:
@@ -886,7 +907,5 @@ def show_plot_arcs_ui(self):
     text_area.pack(fill="both", expand=True, padx=10, pady=10)
     text_area.insert("0.0", arcs_text)
     text_area.configure(state="disabled")
-
-
 
 

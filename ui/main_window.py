@@ -371,16 +371,23 @@ class NovelGeneratorGUI:
   
         build_other_settings_tab(self)  
   
-        # ---- Startup: link chapter number and variants; load latest chapter ----  
         try:  
             # 章节号变更 -> 刷新变体并加载对应内容  
             self.chapter_num_var.trace_add("write", lambda *a: self._on_chapter_num_changed())  
         except Exception:  
             pass  
+        try:
+            self.chapter_num_var.trace_add("write", lambda *a: self.update_finalized_status_label())
+        except Exception:
+            pass
         try:  
             # 保存路径变更 -> 重新计算最新章节  
             self.filepath_var.trace_add("write", lambda *a: self._on_filepath_changed())  
         except Exception:  
+            pass  
+        try:
+            self.filepath_var.trace_add("write", lambda *a: self.update_finalized_status_label())
+        except Exception:
             pass  
         try:  
             # 首次进入根据保存路径下 chapters/ 自动选中最新章节  
@@ -540,6 +547,37 @@ class NovelGeneratorGUI:
             pass  
       
   
+
+    def update_finalized_status_label(self):
+        try:
+            if not hasattr(self, "finalized_hint_label") or self.finalized_hint_label is None:
+                return
+            fp = (self.filepath_var.get() or "").strip() if hasattr(self, "filepath_var") else ""
+            chap = str(self.chapter_num_var.get()).strip() if hasattr(self, "chapter_num_var") else ""
+            if not (fp and chap):
+                try:
+                    self.finalized_hint_label.configure(text="")
+                except Exception:
+                    pass
+                return
+            import os, json
+            status_file = os.path.join(fp, "chapters", "status.json")
+            finalized = False
+            if os.path.exists(status_file):
+                try:
+                    with open(status_file, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    info = data.get(chap)
+                    finalized = bool(info and info.get("finalized"))
+                except Exception:
+                    finalized = False
+            try:
+                self.finalized_hint_label.configure(text=("已定稿" if finalized else ""))
+            except Exception:
+                pass
+        except Exception:
+            pass
+
     def test_llm_config(self):  
   
         """  
