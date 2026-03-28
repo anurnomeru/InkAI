@@ -928,3 +928,37 @@ def show_plot_arcs_ui(self):
     text_area.pack(fill="both", expand=True, padx=10, pady=10)
     text_area.insert("0.0", arcs_text)
     text_area.configure(state="disabled")
+def rebuild_full_vectorstore_ui(self):
+    """当向量库为空时，手动触发一次全量重建。复用既有重建逻辑，不引入新机制。"""
+    filepath = self.filepath_var.get().strip()
+    if not filepath:
+        messagebox.showwarning("警告", "请先配置保存文件路径。")
+        return
+
+    try:
+        from novel_generator.vectorstore_utils import vector_store_is_empty
+        from embedding_adapters import create_embedding_adapter
+        adapter = create_embedding_adapter(
+            self.embedding_interface_format_var.get().strip(),
+            self.embedding_api_key_var.get().strip(),
+            self.embedding_url_var.get().strip(),
+            self.embedding_model_name_var.get().strip(),
+        )
+        from novel_generator.vectorstore_utils import rebuild_vector_store_from_chapters as _rebuild
+        # 若已存在，则按约定不重复重建；若为空，则执行一次全量重建
+        if vector_store_is_empty(filepath):
+            self.safe_log('当前不存在向量库，开始全量重建...')
+            ok = _rebuild(adapter, filepath)
+            if ok:
+                self.safe_log('✅ 向量库已全量重建完成。')
+            else:
+                self.safe_log('⚠️ 无需重建或无可用章节。')
+        else:
+            self.safe_log('向量库已存在，无需重建。如需重建请先清空。')
+    except Exception:
+        self.handle_exception('检查/重建向量库时出错')
+    finally:
+        try:
+            self.master.after(0, getattr(self, 'update_vectorstore_button', lambda: None))
+        except Exception:
+            pass
