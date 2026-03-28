@@ -39,7 +39,7 @@ def merge_character_entries(manual: Dict[str, Any], autos: List[Dict[str, Any]],
         if auto.get('tags'):
             eff['tags'] = _union_list(eff.get('tags', []), list(auto.get('tags') or []))
         # summary
-        if auto.get('summary') and (not eff.get('summary') or not locked('summary')):
+        if auto.get('summary') and (not eff.get('summary')) and (not locked('summary')):
             eff['summary'] = auto.get('summary')
         # attributes (dict of list/str)
         attrs_auto = auto.get('attributes') or {}
@@ -72,3 +72,4 @@ def merge_character_entries(manual: Dict[str, Any], autos: List[Dict[str, Any]],
     if isinstance(eff.get('timeline'), list):
         eff['timeline'].sort(key=lambda ev: (ev.get('ref_chapter', 10**9), ev.get('when','')))
     return eff
+
