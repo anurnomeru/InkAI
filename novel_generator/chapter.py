@@ -472,7 +472,7 @@ def build_chapter_prompt(
                     filepath=filepath,
                     k=actual_k,
                     exclude_text=current_chapter_text
-                )
+                , chapter_lte=novel_number-1)
                 if context:
                     if any(kw in group.lower() for kw in ["技法", "手法", "模板"]):
                         all_contexts.append(f"[TECHNIQUE] {context}")

@@ -1,7 +1,7 @@
-#novel_generator/finalization.py
+﻿#novel_generator/finalization.py
 # -*- coding: utf-8 -*-
 """
-定稿章节和扩写章节（finalize_chapter、enrich_chapter_text）
+瀹氱绔犺妭鍜屾墿鍐欑珷鑺傦紙finalize_chapter銆乪nrich_chapter_text锛?
 """
 import os
 import logging
@@ -10,11 +10,11 @@ from embedding_adapters import create_embedding_adapter
 from prompt_definitions import summary_prompt, update_character_state_prompt
 from novel_generator.common import invoke_with_cleaning
 from utils import read_file, clear_file_content, save_string_to_txt
-from novel_generator.vectorstore_utils import update_vector_store
+from novel_generator.vectorstore_utils import index_chapter_version
 logging.basicConfig(
-    filename='app.log',      # 日志文件名
-    filemode='a',            # 追加模式（'w' 会覆盖）
-    level=logging.INFO,      # 记录 INFO 及以上级别的日志
+    filename='app.log',      # 鏃ュ織鏂囦欢鍚?
+    filemode='a',            # 杩藉姞妯″紡锛?w' 浼氳鐩栵級
+    level=logging.INFO,      # 璁板綍 INFO 鍙婁互涓婄骇鍒殑鏃ュ織
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
@@ -35,8 +35,8 @@ def finalize_chapter(
     timeout: int = 600
 ):
     """
-    对指定章节做最终处理：更新前文摘要、更新角色状态、插入向量库等。
-    默认无需再做扩写操作，若有需要可在外部调用 enrich_chapter_text 处理后再定稿。
+    瀵规寚瀹氱珷鑺傚仛鏈€缁堝鐞嗭細鏇存柊鍓嶆枃鎽樿銆佹洿鏂拌鑹茬姸鎬併€佹彃鍏ュ悜閲忓簱绛夈€?
+    榛樿鏃犻渶鍐嶅仛鎵╁啓鎿嶄綔锛岃嫢鏈夐渶瑕佸彲鍦ㄥ閮ㄨ皟鐢?enrich_chapter_text 澶勭悊鍚庡啀瀹氱銆?
     """
     chapters_dir = os.path.join(filepath, "chapters")
     chapter_file = os.path.join(chapters_dir, f"chapter_{novel_number}.txt")
@@ -81,14 +81,15 @@ def finalize_chapter(
     clear_file_content(character_state_file)
     save_string_to_txt(new_char_state, character_state_file)
 
-    update_vector_store(
+    index_chapter_version(
         embedding_adapter=create_embedding_adapter(
             embedding_interface_format,
             embedding_api_key,
             embedding_url,
             embedding_model_name
         ),
-        new_chapter=chapter_text,
+        chapter_number=novel_number,
+        chapter_text=chapter_text,
         filepath=filepath
     )
 
@@ -106,7 +107,7 @@ def enrich_chapter_text(
     timeout: int=600
 ) -> str:
     """
-    对章节文本进行扩写，使其更接近 word_number 字数，保持剧情连贯。
+    瀵圭珷鑺傛枃鏈繘琛屾墿鍐欙紝浣垮叾鏇存帴杩?word_number 瀛楁暟锛屼繚鎸佸墽鎯呰繛璐€?
     """
     llm_adapter = create_llm_adapter(
         interface_format=interface_format,
@@ -118,8 +119,8 @@ def enrich_chapter_text(
         timeout=timeout
     )
     prompt = f"""\
-以下是需要扩写的章节正文，请在保持风格与连贯性的前提下细化内容，使其更加完整，目标接近 {word_number} 字。直接返回扩写后的正文：
-原文：
+浠ヤ笅鏄渶瑕佹墿鍐欑殑绔犺妭姝ｆ枃锛岃鍦ㄤ繚鎸侀鏍间笌杩炶疮鎬х殑鍓嶆彁涓嬬粏鍖栧唴瀹癸紝浣垮叾鏇村姞瀹屾暣锛岀洰鏍囨帴杩?{word_number} 瀛椼€傜洿鎺ヨ繑鍥炴墿鍐欏悗鐨勬鏂囷細
+鍘熸枃锛?
 {chapter_text}
 """
     enriched_text = invoke_with_cleaning(llm_adapter, prompt)

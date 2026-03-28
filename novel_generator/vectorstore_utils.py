@@ -55,8 +55,45 @@ def clear_vector_store(filepath: str) -> bool:
 def init_vector_store(embedding_adapter, texts, filepath: str):
 
     # Create or load a Chroma vector store under filepath and insert texts.
-    # Return None on failure (non-blocking).
-    # Return None on failure (non-blocking).
+    # texts can be List[str] or List[Document].
+    from langchain.embeddings.base import Embeddings as LCEmbeddings
+    store_dir = get_vectorstore_dir(filepath)
+    os.makedirs(store_dir, exist_ok=True)
+    if texts and hasattr(texts[0], 'page_content'):
+        documents = texts
+    else:
+        documents = [Document(page_content=str(t)) for t in texts]
+    try:
+        class LCEmbeddingWrapper(LCEmbeddings):
+            def embed_documents(self, texts):
+                return call_with_retry(
+                    func=embedding_adapter.embed_documents,
+                    max_retries=3,
+                    fallback_return=[],
+                    texts=texts
+                )
+            def embed_query(self, query: str):
+                res = call_with_retry(
+                    func=embedding_adapter.embed_query,
+                    max_retries=3,
+                    fallback_return=[],
+                    query=query
+                )
+                return res
+        chroma_embedding = LCEmbeddingWrapper()
+        vectorstore = Chroma.from_documents(
+            documents,
+            embedding=chroma_embedding,
+            persist_directory=store_dir,
+            client_settings=Settings(anonymized_telemetry=False),
+            collection_name='novel_collection'
+        )
+        return vectorstore
+    except Exception as e:
+        logging.warning(f'Init vector store failed: {e}')
+        traceback.print_exc()
+        return None
+    # return None
     from langchain.embeddings.base import Embeddings as LCEmbeddings
 
     store_dir = get_vectorstore_dir(filepath)
@@ -94,45 +131,7 @@ def init_vector_store(embedding_adapter, texts, filepath: str):
         logging.warning(f"Init vector store failed: {e}")
         traceback.print_exc()
         return None
-
-def load_vector_store(embedding_adapter, filepath: str):
-
-    # Load existing Chroma vector store; return None if missing/failure.
-
-    from langchain.embeddings.base import Embeddings as LCEmbeddings
-    store_dir = get_vectorstore_dir(filepath)
-    if not os.path.exists(store_dir):
-        logging.info("Vector store not found. Will return None.")
         return None
-
-    try:
-        class LCEmbeddingWrapper(LCEmbeddings):
-            def embed_documents(self, texts):
-                return call_with_retry(
-                    func=embedding_adapter.embed_documents,
-                    max_retries=3,
-                    fallback_return=[],
-                    texts=texts
-                )
-            def embed_query(self, query: str):
-                res = call_with_retry(
-                    func=embedding_adapter.embed_query,
-                    max_retries=3,
-                    fallback_return=[],
-                    query=query
-                )
-                return res
-
-        chroma_embedding = LCEmbeddingWrapper()
-        return Chroma(
-            persist_directory=store_dir,
-            embedding_function=chroma_embedding,
-            client_settings=Settings(anonymized_telemetry=False),
-            collection_name="novel_collection"
-        )
-    except Exception as e:
-        logging.warning(f"Failed to load vector store: {e}")
-        traceback.print_exc()
         return None
 
 def split_by_length(text: str, max_length: int = 500):
@@ -208,7 +207,7 @@ def update_vector_store(embedding_adapter, new_chapter: str, filepath: str):
         logging.warning(f"Failed to update vector store: {e}")
         traceback.print_exc()
 
-def get_relevant_context_from_vector_store(embedding_adapter, query: str, filepath: str, k: int = 2, exclude_text: str | None = None) -> str:
+def get_relevant_context_from_vector_store(embedding_adapter, query: str, filepath: str, k: int = 2, exclude_text: str | None = None, chapter_lte: int | None = None) -> str:
     # 浠庡悜閲忓簱涓绱笌 query 鏈€鐩稿叧鐨?k 娈垫枃鏈紝鎷兼帴杩斿洖銆?
     # 鍙€?exclude_text锛氳嫢鎻愪緵锛屽垯浼氳繃婊ゆ帀涓庝箣瀹屽叏瀛愪覆鍖归厤鐨勭墖娈碉紙鐢ㄤ簬鎺掗櫎鈥滃綋鍓嶇珷鑺傚簾绋库€濓級銆?
     # 鏈€缁堜粎杩斿洖 <=2000 瀛楃鐨勬嫾鎺ユ枃鏈€?
@@ -218,7 +217,14 @@ def get_relevant_context_from_vector_store(embedding_adapter, query: str, filepa
         return ""
 
     try:
-        docs = store.similarity_search(query, k=k)
+        
+        filter_dict = {"active": True}
+        try:
+            if chapter_lte is not None:
+                filter_dict["chapter"] = {"$lte": int(chapter_lte)}
+        except Exception:
+            pass
+        docs = store.similarity_search(query, k=k, filter=filter_dict)
         if not docs:
             logging.info(f"No relevant documents found for query '{query}'. Returning empty context.")
             return ""
@@ -353,3 +359,35 @@ def rebuild_vector_store_from_chapters(embedding_adapter, filepath: str) -> bool
         logging.error(f"Full rebuild failed: {e}")
         traceback.print_exc()
         return False
+
+
+def _manifest_path(filepath: str) -> str:
+    return os.path.join(get_vectorstore_dir(filepath), 'manifest.json')
+
+
+def load_manifest(filepath: str) -> dict:
+    try:
+        mp = _manifest_path(filepath)
+        if os.path.exists(mp):
+            import json
+            with open(mp, 'r', encoding='utf-8') as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return {"schema_version": 1, "chapters": {}}
+
+
+def save_manifest(manifest: dict, filepath: str) -> None:
+    try:
+        mp = _manifest_path(filepath)
+        os.makedirs(os.path.dirname(mp), exist_ok=True)
+        import json, tempfile
+        tmp = mp + '.tmp'
+        with open(tmp, 'w', encoding='utf-8') as f:
+            json.dump(manifest, f, ensure_ascii=False, indent=2)
+        import os
+        if os.path.exists(mp):
+            os.remove(mp)
+        os.replace(tmp, mp)
+    except Exception:
+        traceback.print_exc()
