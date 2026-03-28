@@ -95,6 +95,13 @@ def finalize_chapter(
 
     logging.info(f"Chapter {novel_number} has been finalized.")
 
+    try:
+        from novel_generator.character_integration import process_chapter_for_characters
+        logging.info(f"[角色库] Finalize Hook: 开始从第{novel_number}章抽取角色…")
+        cnt = process_chapter_for_characters(chapter_text, novel_number, filepath)
+        logging.info(f"[角色库] Finalize Hook: 已写入 {cnt} 个角色增量")
+    except Exception as e:
+        logging.warning(f"[角色库] Finalize Hook 失败: err={e}")
 def enrich_chapter_text(
     chapter_text: str,
     word_number: int,
