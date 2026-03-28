@@ -581,3 +581,97 @@ def index_chapter_version(embedding_adapter, chapter_number: int, chapter_text: 
         return False
 
 # ===== End added =====
+
+# ===== overrides for Chroma + manifest helpers (appended) =====
+from langchain.embeddings.base import Embeddings as __LCEmbeddings
+
+def load_vector_store(embedding_adapter, filepath: str):  # override
+    try:
+        store_dir = get_vectorstore_dir(filepath)
+        if not os.path.isdir(store_dir):
+            return None
+        class __LCEmbeddingWrapper(__LCEmbeddings):
+            def embed_documents(self, texts):
+                return call_with_retry(func=embedding_adapter.embed_documents, max_retries=3, fallback_return=[], texts=texts)
+            def embed_query(self, query: str):
+                return call_with_retry(func=embedding_adapter.embed_query, max_retries=3, fallback_return=[], query=query)
+        chroma_embedding = __LCEmbeddingWrapper()
+        return Chroma(
+            embedding_function=chroma_embedding,
+            persist_directory=store_dir,
+            client_settings=Settings(anonymized_telemetry=False),
+            collection_name='novel_collection'
+        )
+    except Exception as e:
+        logging.warning(f"Load vector store failed: {e}")
+        traceback.print_exc()
+        return None
+
+
+def save_manifest(manifest: dict, filepath: str) -> None:  # override to avoid local os shadow
+    try:
+        mp = _manifest_path(filepath)
+        os.makedirs(os.path.dirname(mp), exist_ok=True)
+        import json, tempfile
+        tmp = mp + '.tmp'
+        with open(tmp, 'w', encoding='utf-8') as f:
+            json.dump(manifest, f, ensure_ascii=False, indent=2)
+        if os.path.exists(mp):
+            os.remove(mp)
+        os.replace(tmp, mp)
+    except Exception:
+        traceback.print_exc()
+
+
+def index_chapter_version(embedding_adapter, chapter_number: int, chapter_text: str, filepath: str) -> bool:  # override
+    try:
+        segs = split_text_for_vectorstore(chapter_text)
+        if not segs:
+            logging.info("No segments to index for this chapter.")
+            return False
+        store = load_vector_store(embedding_adapter, filepath)
+        if not store:
+            store_dir = get_vectorstore_dir(filepath)
+            os.makedirs(store_dir, exist_ok=True)
+            class __LCEmbeddingWrapper(__LCEmbeddings):
+                def embed_documents(self, texts):
+                    return call_with_retry(func=embedding_adapter.embed_documents, max_retries=3, fallback_return=[], texts=texts)
+                def embed_query(self, query: str):
+                    return call_with_retry(func=embedding_adapter.embed_query, max_retries=3, fallback_return=[], query=query)
+            chroma_embedding = __LCEmbeddingWrapper()
+            store = Chroma(
+                embedding_function=chroma_embedding,
+                persist_directory=store_dir,
+                client_settings=Settings(anonymized_telemetry=False),
+                collection_name='novel_collection'
+            )
+        manifest = load_manifest(filepath)
+        chap_key = str(int(chapter_number))
+        try:
+            prev = int(manifest.get('chapters', {}).get(chap_key, {}).get('current_version', 0))
+        except Exception:
+            prev = 0
+        new_ver = prev + 1 if prev >= 1 else 1
+        try:
+            store.delete(where={'chapter': int(chapter_number)})
+        except Exception:
+            pass
+        docs = [
+            Document(
+                page_content=str(s),
+                metadata={'chapter': int(chapter_number), 'chapter_version': int(new_ver), 'segment_idx': int(i), 'active': True},
+            )
+            for i, s in enumerate(segs)
+        ]
+        store.add_documents(docs)
+        if 'chapters' not in manifest:
+            manifest['chapters'] = {}
+        manifest['chapters'][chap_key] = {'current_version': int(new_ver)}
+        save_manifest(manifest, filepath)
+        return True
+    except Exception as e:
+        logging.error(f"Index chapter version failed: {e}")
+        traceback.print_exc()
+        return False
+
+# ===== end overrides =====
