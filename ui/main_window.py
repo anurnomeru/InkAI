@@ -550,15 +550,19 @@ class NovelGeneratorGUI:
 
     def update_finalized_status_label(self):
         try:
-            if not hasattr(self, "finalized_hint_label") or self.finalized_hint_label is None:
-                return
             fp = (self.filepath_var.get() or "").strip() if hasattr(self, "filepath_var") else ""
             chap = str(self.chapter_num_var.get()).strip() if hasattr(self, "chapter_num_var") else ""
-            if not (fp and chap):
+            def _apply(label, finalized):
                 try:
-                    self.finalized_hint_label.configure(text="")
+                    if label:
+                        label.configure(text=("已定稿" if finalized else ""))
                 except Exception:
                     pass
+            if not (hasattr(self, "finalized_hint_label") or hasattr(self, "finalized_hint_label_params")):
+                return
+            if not (fp and chap):
+                _apply(getattr(self, "finalized_hint_label", None), False)
+                _apply(getattr(self, "finalized_hint_label_params", None), False)
                 return
             import os, json
             status_file = os.path.join(fp, "chapters", "status.json")
@@ -571,13 +575,10 @@ class NovelGeneratorGUI:
                     finalized = bool(info and info.get("finalized"))
                 except Exception:
                     finalized = False
-            try:
-                self.finalized_hint_label.configure(text=("已定稿" if finalized else ""))
-            except Exception:
-                pass
+            _apply(getattr(self, "finalized_hint_label", None), finalized)
+            _apply(getattr(self, "finalized_hint_label_params", None), finalized)
         except Exception:
             pass
-
     def test_llm_config(self):  
   
         """  
