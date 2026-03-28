@@ -907,7 +907,7 @@ def clear_vectorstore_handler(self):
 
             self.safe_log(f'开始清空向量库: path={filepath}')
             from novel_generator.vectorstore_utils import clear_vector_store
-            ok = clear_vector_store(filepath)
+            ok = clear_vector_store(filepath, progress_cb=lambda m: self.safe_log(str(m)))
             dt = time.perf_counter() - t0
             if ok:
                 self.safe_log(f'✅ 已清空向量库（耗时 {dt:.2f}s）')
@@ -1010,7 +1010,7 @@ def rebuild_full_vectorstore_ui(self):
             )
             from novel_generator.vectorstore_utils import rebuild_vector_store_from_chapters as _rebuild
             t1 = time.perf_counter()
-            ok = _rebuild(adapter, filepath)
+            ok = _rebuild(adapter, filepath, progress_cb=lambda m: self.safe_log(str(m)))
             dt = time.perf_counter() - t1
             if ok:
                 self.safe_log(f'✅ 向量库已全量重建完成（耗时 {dt:.2f}s）。')

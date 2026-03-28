@@ -38,21 +38,26 @@ def get_vectorstore_dir(filepath: str) -> str:
     return os.path.join(filepath, "vectorstore")
 
 
-def clear_vector_store(filepath: str) -> bool:
+def clear_vector_store(filepath: str, progress_cb=None) -> bool:
     """Clear vector store directory with extra logging and robustness."""
+    def _progress(msg):
+        try:
+            if progress_cb:
+                progress_cb(str(msg))
+        except Exception:
+            pass
     import shutil, stat
     store_dir = get_vectorstore_dir(filepath)
-        logging.info(f'[Vector] rebuild: start path={filepath} store={store_dir}')
-    logging.info(f"[Vector] clear: target={store_dir}")
+    logging.info(f"[Vector] clear: target={store_dir}"); _progress(f'[??] ??: {store_dir}')
     if not os.path.exists(store_dir):
-        logging.info("[Vector] clear: no vectorstore directory; nothing to do")
+        logging.info("[Vector] clear: no vectorstore directory; nothing to do"); _progress('[??] ???????????')
         return False
     try:
         files_cnt = 0
         dirs_cnt = 0
         for _root, dirs, files in os.walk(store_dir):
             files_cnt += len(files); dirs_cnt += len(dirs)
-        logging.info(f"[Vector] clear: removing {files_cnt} files in {dirs_cnt} dirs ?")
+        logging.info(f"[Vector] clear: removing {files_cnt} files in {dirs_cnt} dirs ?"); _progress(f'[??] ???: ?? {files_cnt} ? / ?? {dirs_cnt} ?')
         t0 = time.perf_counter()
         def _onerror(func, path, exc_info):
             try:
@@ -62,10 +67,10 @@ def clear_vector_store(filepath: str) -> bool:
                 logging.warning(f"[Vector] clear: onerror path={path} err={ee}")
         shutil.rmtree(store_dir, onerror=_onerror)
         dt = time.perf_counter() - t0
-        logging.info(f"[Vector] clear: removed directory in {dt:.2f}s")
+        logging.info(f"[Vector] clear: removed directory in {dt:.2f}s"); _progress(f'[??] ?????? {dt:.2f}s')
         return True
     except Exception as e:
-        logging.error(f"[Vector] clear: failed err={e}")
+        logging.error(f"[Vector] clear: failed err={e}"); _progress(f'[??] ????: {e}')
         traceback.print_exc()
         return False
 
@@ -98,6 +103,7 @@ def init_vector_store(embedding_adapter, texts, filepath: str):
                 )
                 return res
         chroma_embedding = LCEmbeddingWrapper()
+        _progress(f'[??] ??????...')
         vectorstore = Chroma.from_documents(
             documents,
             embedding=chroma_embedding,
@@ -136,6 +142,7 @@ def init_vector_store(embedding_adapter, texts, filepath: str):
                 return res
 
         chroma_embedding = LCEmbeddingWrapper()
+        _progress(f'[??] ??????...')
         vectorstore = Chroma.from_documents(
             documents,
             embedding=chroma_embedding,
@@ -295,11 +302,17 @@ def vector_store_is_empty(filepath: str) -> bool:
     return True
 
 
-def rebuild_vector_store_from_chapters(embedding_adapter, filepath: str) -> bool:
+def rebuild_vector_store_from_chapters(embedding_adapter, filepath: str, progress_cb=None) -> bool:
     """
     Rebuild the vector store from all existing chapter_*.txt under <filepath>/chapters
     Only runs when the store directory is missing or empty. Returns True on success.
     """
+    def _progress(msg):
+        try:
+            if progress_cb:
+                progress_cb(str(msg))
+        except Exception:
+            pass
     try:
         store_dir = get_vectorstore_dir(filepath)
         # Only rebuild when empty / missing
@@ -361,6 +374,7 @@ def rebuild_vector_store_from_chapters(embedding_adapter, filepath: str) -> bool
         # Create store with first chunk to avoid too large single call
         first_chunk = all_segments[:200]
         rest = all_segments[200:]
+        _progress(f'[??] ??????...')
         vectorstore = Chroma.from_documents(
             first_chunk,
             embedding=chroma_embedding,
@@ -370,6 +384,7 @@ def rebuild_vector_store_from_chapters(embedding_adapter, filepath: str) -> bool
         )
         if rest:
             vectorstore.add_documents(rest)
+            _progress(f'[??] ????????{len(all_docs)}')
         logging.info(f"Full vector store rebuilt from {len(chapter_files)} chapters, total segments: {len(all_segments)}")
         return True
     except Exception as e:
@@ -524,6 +539,7 @@ def rebuild_vector_store_from_chapters(embedding_adapter, filepath: str) -> bool
         os.makedirs(store_dir, exist_ok=True)
         first_chunk = all_docs[:200]
         rest = all_docs[200:]
+        _progress(f'[??] ??????...')
         vectorstore = Chroma.from_documents(
             first_chunk,
             embedding=chroma_embedding,
@@ -533,7 +549,9 @@ def rebuild_vector_store_from_chapters(embedding_adapter, filepath: str) -> bool
         )
         if rest:
             vectorstore.add_documents(rest)
+            _progress(f'[??] ????????{len(all_docs)}')
         save_manifest(manifest, filepath)
+        _progress('[??] manifest ????')
         logging.info(
             f"Full vector store rebuilt from {len(chapter_files)} chapters, total segments: {len(all_docs)}"
         )
@@ -591,6 +609,7 @@ def index_chapter_version(embedding_adapter, chapter_number: int, chapter_text: 
             manifest["chapters"] = {}
         manifest["chapters"][chap_key] = {"current_version": int(new_ver)}
         save_manifest(manifest, filepath)
+        _progress('[??] manifest ????')
         return True
     except Exception as e:
         logging.error(f"Index chapter version failed: {e}")
@@ -685,6 +704,7 @@ def index_chapter_version(embedding_adapter, chapter_number: int, chapter_text: 
             manifest['chapters'] = {}
         manifest['chapters'][chap_key] = {'current_version': int(new_ver)}
         save_manifest(manifest, filepath)
+        _progress('[??] manifest ????')
         return True
     except Exception as e:
         logging.error(f"Index chapter version failed: {e}")
@@ -692,4 +712,5 @@ def index_chapter_version(embedding_adapter, chapter_number: int, chapter_text: 
         return False
 
 # ===== end overrides =====
+
 
