@@ -15,6 +15,7 @@ import re
 import ssl
 import requests
 import warnings
+import time
 from langchain_chroma import Chroma
 logging.basicConfig(
     filename='app.log',      # 閺冦儱绻旈弬鍥︽閸?
@@ -36,19 +37,35 @@ def get_vectorstore_dir(filepath: str) -> str:
     # Get vectorstore path
     return os.path.join(filepath, "vectorstore")
 
+
 def clear_vector_store(filepath: str) -> bool:
-    # Clear vector store
-    import shutil
+    """Clear vector store directory with extra logging and robustness."""
+    import shutil, stat
     store_dir = get_vectorstore_dir(filepath)
+        logging.info(f'[Vector] rebuild: start path={filepath} store={store_dir}')
+    logging.info(f"[Vector] clear: target={store_dir}")
     if not os.path.exists(store_dir):
-        logging.info("No vector store found to clear.")
+        logging.info("[Vector] clear: no vectorstore directory; nothing to do")
         return False
     try:
-        shutil.rmtree(store_dir)
-        logging.info(f"Vector store directory '{store_dir}' removed.")
+        files_cnt = 0
+        dirs_cnt = 0
+        for _root, dirs, files in os.walk(store_dir):
+            files_cnt += len(files); dirs_cnt += len(dirs)
+        logging.info(f"[Vector] clear: removing {files_cnt} files in {dirs_cnt} dirs ?")
+        t0 = time.perf_counter()
+        def _onerror(func, path, exc_info):
+            try:
+                os.chmod(path, stat.S_IWRITE)
+                func(path)
+            except Exception as ee:
+                logging.warning(f"[Vector] clear: onerror path={path} err={ee}")
+        shutil.rmtree(store_dir, onerror=_onerror)
+        dt = time.perf_counter() - t0
+        logging.info(f"[Vector] clear: removed directory in {dt:.2f}s")
         return True
     except Exception as e:
-        logging.error(f"閺冪姵纭堕崚鐘绘珟閸氭垿鍣烘惔鎾存瀮娴犺泛銇欓敍宀冾嚞閸忔娊妫寸粙瀣碍閸氬孩澧滈崝銊ュ灩闂?{store_dir}閵嗕繐n {str(e)}")
+        logging.error(f"[Vector] clear: failed err={e}")
         traceback.print_exc()
         return False
 

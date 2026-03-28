@@ -870,42 +870,103 @@ def import_knowledge_handler(self):
             self.enable_button_safe(self.btn_import_knowledge)
             messagebox.showerror("错误", f"线程启动失败: {str(e)}")
 
+
 def clear_vectorstore_handler(self):
     filepath = self.filepath_var.get().strip()
     if not filepath:
-        messagebox.showwarning("警告", "请先配置保存文件路径。")
+        messagebox.showwarning("??", "???????????")
         return
 
-    first_confirm = messagebox.askyesno("警告", "确定要清空本地向量库吗？此操作不可恢复！")
-    if first_confirm:
-        second_confirm = messagebox.askyesno("二次确认", "你确定真的要删除所有向量数据吗？此操作不可恢复！")
-        if second_confirm:
-            if clear_vector_store(filepath):
-                self.log("已清空向量库。")
-                try:
-                    self.master.after(0, getattr(self, 'update_vectorstore_button', lambda: None))
-                except Exception:
-                    pass
+    first_confirm = messagebox.askyesno("??", "????????????????????")
+    if not first_confirm:
+        try:
+            self.safe_log('???????????????????')
+        except Exception:
+            pass
+        return
+    second_confirm = messagebox.askyesno("????", "????????????????????????")
+    if not second_confirm:
+        try:
+            self.safe_log('???????????????????')
+        except Exception:
+            pass
+        return
+
+    def _task():
+        import time
+        t0 = time.perf_counter()
+        try:
+            try:
+                if hasattr(self, 'btn_clear_vectorstore') and self.btn_clear_vectorstore:
+                    self.disable_button_safe(self.btn_clear_vectorstore)
+                if hasattr(self, 'btn_clear_vectorstore_chapters') and self.btn_clear_vectorstore_chapters:
+                    self.disable_button_safe(self.btn_clear_vectorstore_chapters)
+            except Exception:
+                pass
+
+            self.safe_log(f'???????: path={filepath}')
+            from novel_generator.vectorstore_utils import clear_vector_store, vector_store_is_empty
+            ok = clear_vector_store(filepath)
+            dt = time.perf_counter() - t0
+            if ok:
+                self.safe_log(f'? ????????? {dt:.2f}s?')
             else:
-                self.log(f"未能清空向量库，请关闭程序后手动删除 {filepath} 下的 vectorstore 文件夹。")
+                self.safe_log('?? ??????????????')
 
             try:
-                from novel_generator.vectorstore_utils import vector_store_is_empty
-                from embedding_adapters import create_embedding_adapter
-                if vector_store_is_empty(filepath):
-                    self.safe_log('当前不存在向量库，开始全量重建...')
-                    adapter = create_embedding_adapter(self.embedding_interface_format_var.get().strip(), self.embedding_api_key_var.get().strip(), self.embedding_url_var.get().strip(), self.embedding_model_name_var.get().strip())
-                    from novel_generator.vectorstore_utils import rebuild_vector_store_from_chapters as _rebuild
-                    if _rebuild(adapter, filepath):
-                        self.safe_log('✅ 向量库已全量重建完成。')
-                        try:
-                            self.master.after(0, getattr(self, 'update_vectorstore_button', lambda: None))
-                        except Exception:
-                            pass
-                    else:
-                        self.safe_log('⚠️ 无需重建或无可用章节。')
+                self.master.after(0, getattr(self, 'update_vectorstore_button', lambda: None))
             except Exception:
-                self.handle_exception('检查/重建向量库时出错')
+                pass
+
+            try:
+                empty = vector_store_is_empty(filepath)
+            except Exception:
+                empty = True
+            if empty:
+                try:
+                    self.safe_log('???????????????...')
+                    from embedding_adapters import create_embedding_adapter
+                    adapter = create_embedding_adapter(
+                        self.embedding_interface_format_var.get().strip(),
+                        self.embedding_api_key_var.get().strip(),
+                        self.embedding_url_var.get().strip(),
+                        self.embedding_model_name_var.get().strip()
+                    )
+                    from novel_generator.vectorstore_utils import rebuild_vector_store_from_chapters as _rebuild
+                    t1 = time.perf_counter()
+                    rebuilt = _rebuild(adapter, filepath)
+                    dt2 = time.perf_counter() - t1
+                    if rebuilt:
+                        self.safe_log(f'? ????????????? {dt2:.2f}s?')
+                    else:
+                        self.safe_log('?? ???????????')
+                except Exception:
+                    self.handle_exception('??/????????')
+            try:
+                self.master.after(0, getattr(self, 'update_vectorstore_button', lambda: None))
+            except Exception:
+                pass
+        finally:
+            try:
+                if hasattr(self, 'btn_clear_vectorstore') and self.btn_clear_vectorstore:
+                    self.enable_button_safe(self.btn_clear_vectorstore)
+                if hasattr(self, 'btn_clear_vectorstore_chapters') and self.btn_clear_vectorstore_chapters:
+                    self.enable_button_safe(self.btn_clear_vectorstore_chapters)
+            except Exception:
+                pass
+
+    try:
+        import threading
+        thread = threading.Thread(target=_task, daemon=True)
+        thread.start()
+    except Exception as e:
+        try:
+            if hasattr(self, 'btn_clear_vectorstore') and self.btn_clear_vectorstore:
+                self.enable_button_safe(self.btn_clear_vectorstore)
+        except Exception:
+            pass
+        messagebox.showerror("??", f"??????: {str(e)}")
+
 def show_plot_arcs_ui(self):
     filepath = self.filepath_var.get().strip()
     if not filepath:
