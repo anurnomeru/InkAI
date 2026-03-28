@@ -66,6 +66,7 @@ from ui.generation_handlers import (
 )
 from ui.character_select_dialog import open_character_select_dialog
 from ui.character_review_dialog import open_character_review_dialog
+from ui.role_library_hub import open_role_library_hub
 
 from ui.setting_tab import build_setting_tab, load_novel_architecture, save_novel_architecture  
   
@@ -979,7 +980,8 @@ class NovelGeneratorGUI:
 
     open_embed_dashboard_ui = open_embed_dashboard_ui
     open_character_select_dialog = open_character_select_dialog
-    open_character_review_dialog = open_character_review_dialog  
+    open_character_review_dialog = open_character_review_dialog
+    open_role_library_hub = open_role_library_hub  
 
     load_config_btn = load_config_btn  
   
