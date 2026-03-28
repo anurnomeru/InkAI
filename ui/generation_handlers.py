@@ -918,30 +918,12 @@ def clear_vectorstore_handler(self):
             except Exception:
                 pass
 
+
+            # stop auto rebuild; button will toggle to 'Rebuild Vectorstore'
             try:
-                empty = vector_store_is_empty(filepath)
+                self.safe_log('Vectorstore cleared: button toggled to Rebuild; click to run full rebuild.')
             except Exception:
-                empty = True
-            if empty:
-                try:
-                    self.safe_log('???????????????...')
-                    from embedding_adapters import create_embedding_adapter
-                    adapter = create_embedding_adapter(
-                        self.embedding_interface_format_var.get().strip(),
-                        self.embedding_api_key_var.get().strip(),
-                        self.embedding_url_var.get().strip(),
-                        self.embedding_model_name_var.get().strip()
-                    )
-                    from novel_generator.vectorstore_utils import rebuild_vector_store_from_chapters as _rebuild
-                    t1 = time.perf_counter()
-                    rebuilt = _rebuild(adapter, filepath)
-                    dt2 = time.perf_counter() - t1
-                    if rebuilt:
-                        self.safe_log(f'? ????????????? {dt2:.2f}s?')
-                    else:
-                        self.safe_log('?? ???????????')
-                except Exception:
-                    self.handle_exception('??/????????')
+                pass
             try:
                 self.master.after(0, getattr(self, 'update_vectorstore_button', lambda: None))
             except Exception:
