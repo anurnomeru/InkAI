@@ -172,11 +172,11 @@ def build_novel_params_area(self, start_row=1):
         self.char_inv_text.insert("0.0", self.characters_involved_var.get())
 
     # ????
-    import_btn = ctk.CTkButton(char_inv_frame, text=t("??"), width=80, command=self.show_character_import_window, font=("Microsoft YaHei", 12))
+    import_btn = ctk.CTkButton(char_inv_frame, text=t("导入"), width=80, command=self.show_character_import_window, font=("Microsoft YaHei", 12))
     import_btn.grid(row=0, column=1, padx=(0,5), pady=5, sticky="e")
 
     # ??????????????
-    select_btn = ctk.CTkButton(char_inv_frame, text=t("??????"), width=120, command=self.open_character_select_dialog, font=("Microsoft YaHei", 12))
+    select_btn = ctk.CTkButton(char_inv_frame, text=t("从角色库选择"), width=120, command=self.open_character_select_dialog, font=("Microsoft YaHei", 12))
     select_btn.grid(row=0, column=2, padx=(5,0), pady=5, sticky="e")
 
     row_idx += 1
