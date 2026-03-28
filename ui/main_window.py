@@ -62,6 +62,8 @@ from ui.generation_handlers import (
 
     rebuild_full_vectorstore_ui  
 
+    open_embed_dashboard_ui  
+
 )  
   
 from ui.setting_tab import build_setting_tab, load_novel_architecture, save_novel_architecture  
@@ -972,7 +974,9 @@ class NovelGeneratorGUI:
     clear_vectorstore_handler = clear_vectorstore_handler  
     show_plot_arcs_ui = show_plot_arcs_ui  
 
-    rebuild_full_vectorstore_ui = rebuild_full_vectorstore_ui  
+    rebuild_full_vectorstore_ui = rebuild_full_vectorstore_ui
+
+    open_embed_dashboard_ui = open_embed_dashboard_ui  
 
     load_config_btn = load_config_btn  
   
@@ -1183,6 +1187,10 @@ class NovelGeneratorGUI:
   
   
   
+
+
+
+
 
 
 

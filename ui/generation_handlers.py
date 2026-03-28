@@ -1040,3 +1040,64 @@ def rebuild_full_vectorstore_ui(self):
         except Exception:
             pass
         messagebox.showerror("错误", f"线程启动失败: {str(e)}")
+
+def open_embed_dashboard_ui(self):
+    """启动 Streamlit 向量工作台（tools/embed_dashboard.py）。"""
+    try:
+        import threading, subprocess, sys as _sys, os as _os, webbrowser
+        btn = getattr(self, 'btn_open_embed_dashboard', None)
+        if btn is not None:
+            try:
+                self.disable_button_safe(btn)
+            except Exception:
+                pass
+        def _run():
+            try:
+                try:
+                    import streamlit  # noqa: F401
+                except Exception:
+                    try:
+                        self.safe_log('未检测到 streamlit，请先安装依赖：pip install -r requirements.txt 或 pip install streamlit plotly umap-learn pandas')
+                    except Exception:
+                        pass
+                    try:
+                        from tkinter import messagebox as _mb
+                        _mb.showwarning('提示', '未检测到 streamlit，请先安装依赖：\n pip install -r requirements.txt')
+                    except Exception:
+                        pass
+                    return
+                proj_root = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), _os.pardir))
+                script = _os.path.join(proj_root, 'tools', 'embed_dashboard.py')
+                if not _os.path.exists(script):
+                    try:
+                        self.safe_log(f'未找到工作台脚本: {script}')
+                    except Exception:
+                        pass
+                    return
+                cmd = [_sys.executable, '-m', 'streamlit', 'run', script, '--server.headless=false', '--browser.gatherUsageStats=false', '--server.port=8501']
+                try:
+                    self.safe_log('正在启动向量工作台（浏览器将自动打开）...')
+                except Exception:
+                    pass
+                subprocess.Popen(cmd, cwd=proj_root, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=False)
+                try:
+                    webbrowser.open_new('http://localhost:8501')
+                except Exception:
+                    pass
+            except Exception:
+                try:
+                    self.handle_exception('启动向量工作台时出错')
+                except Exception:
+                    pass
+            finally:
+                if btn is not None:
+                    try:
+                        self.enable_button_safe(btn)
+                    except Exception:
+                        pass
+        threading.Thread(target=_run, daemon=True).start()
+    except Exception:
+        try:
+            self.handle_exception('启动向量工作台时出错')
+        except Exception:
+            pass
