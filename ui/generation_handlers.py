@@ -874,20 +874,21 @@ def import_knowledge_handler(self):
 def clear_vectorstore_handler(self):
     filepath = self.filepath_var.get().strip()
     if not filepath:
-        messagebox.showwarning("??", "???????????")
+        messagebox.showwarning("警告", "请先配置保存文件路径。")
         return
 
-    first_confirm = messagebox.askyesno("??", "????????????????????")
+    # UI 线程做确认；耗时操作放后台，避免卡死
+    first_confirm = messagebox.askyesno("警告", "确定要清空本地向量库吗？此操作不可恢复！")
     if not first_confirm:
         try:
-            self.safe_log('???????????????????')
+            self.safe_log('已取消：清空向量库（第一次确认未通过）')
         except Exception:
             pass
         return
-    second_confirm = messagebox.askyesno("????", "????????????????????????")
+    second_confirm = messagebox.askyesno("二次确认", "你确定真的要删除所有向量数据吗？此操作不可恢复！")
     if not second_confirm:
         try:
-            self.safe_log('???????????????????')
+            self.safe_log('已取消：清空向量库（第二次确认未通过）')
         except Exception:
             pass
         return
@@ -904,28 +905,22 @@ def clear_vectorstore_handler(self):
             except Exception:
                 pass
 
-            self.safe_log(f'???????: path={filepath}')
-            from novel_generator.vectorstore_utils import clear_vector_store, vector_store_is_empty
+            self.safe_log(f'开始清空向量库: path={filepath}')
+            from novel_generator.vectorstore_utils import clear_vector_store
             ok = clear_vector_store(filepath)
             dt = time.perf_counter() - t0
             if ok:
-                self.safe_log(f'? ????????? {dt:.2f}s?')
+                self.safe_log(f'✅ 已清空向量库（耗时 {dt:.2f}s）')
             else:
-                self.safe_log('?? ??????????????')
+                self.safe_log('⚠️ 清空向量库未成功或目录不存在')
 
+            # 清空后仅切换按钮为“重建向量库”，不自动重建
             try:
                 self.master.after(0, getattr(self, 'update_vectorstore_button', lambda: None))
             except Exception:
                 pass
-
-
-            # stop auto rebuild; button will toggle to 'Rebuild Vectorstore'
             try:
-                self.safe_log('Vectorstore cleared: button toggled to Rebuild; click to run full rebuild.')
-            except Exception:
-                pass
-            try:
-                self.master.after(0, getattr(self, 'update_vectorstore_button', lambda: None))
+                self.safe_log('已清空向量库：按钮已切换为“重建向量库”，可手动触发全量重建。')
             except Exception:
                 pass
         finally:
@@ -947,8 +942,7 @@ def clear_vectorstore_handler(self):
                 self.enable_button_safe(self.btn_clear_vectorstore)
         except Exception:
             pass
-        messagebox.showerror("??", f"??????: {str(e)}")
-
+        messagebox.showerror("错误", f"线程启动失败: {str(e)}")
 def show_plot_arcs_ui(self):
     filepath = self.filepath_var.get().strip()
     if not filepath:
@@ -1005,4 +999,5 @@ def rebuild_full_vectorstore_ui(self):
             self.master.after(0, getattr(self, 'update_vectorstore_button', lambda: None))
         except Exception:
             pass
+
 
