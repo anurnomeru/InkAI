@@ -41,19 +41,32 @@ from ui.config_tab import build_config_tabview, load_config_btn, save_config_btn
 from ui.novel_params_tab import build_novel_params_area, build_optional_buttons_area  
   
 from ui.generation_handlers import (
+
     generate_novel_architecture_ui,
+
     generate_chapter_blueprint_ui,
+
     generate_chapter_draft_ui,
+
     finalize_chapter_ui,
+
     do_consistency_check,
+
     import_knowledge_handler,
+
     clear_vectorstore_handler,
+
     show_plot_arcs_ui,
+
     generate_batch_ui,
+
     rebuild_full_vectorstore_ui,
-    open_embed_dashboard_ui
-)  
-  
+
+    open_embed_dashboard_ui,
+)
+from ui.character_select_dialog import open_character_select_dialog
+from ui.character_review_dialog import open_character_review_dialog
+
 from ui.setting_tab import build_setting_tab, load_novel_architecture, save_novel_architecture  
   
 from ui.directory_tab import build_directory_tab, load_chapter_blueprint, save_chapter_blueprint  
@@ -964,7 +977,9 @@ class NovelGeneratorGUI:
 
     rebuild_full_vectorstore_ui = rebuild_full_vectorstore_ui
 
-    open_embed_dashboard_ui = open_embed_dashboard_ui  
+    open_embed_dashboard_ui = open_embed_dashboard_ui
+    open_character_select_dialog = open_character_select_dialog
+    open_character_review_dialog = open_character_review_dialog  
 
     load_config_btn = load_config_btn  
   
@@ -1175,6 +1190,15 @@ class NovelGeneratorGUI:
   
   
   
+
+
+
+
+
+
+
+
+
 
 
 

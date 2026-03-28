@@ -3,7 +3,6 @@
 # -*- coding: utf-8 -*-
 
 import customtkinter as ctk
-
 from tkinter import filedialog, messagebox
 
 from ui.context_menu import TextWidgetContextMenu
@@ -160,38 +159,31 @@ def build_novel_params_area(self, start_row=1):
     char_inv_frame.grid(row=row_idx, column=1, padx=5, pady=5, sticky="nsew")
 
     char_inv_frame.columnconfigure(0, weight=1)
+    char_inv_frame.columnconfigure(1, weight=0)
+    char_inv_frame.columnconfigure(2, weight=0)
 
     char_inv_frame.rowconfigure(0, weight=1)
 
-    
-
-    # 娑撳顢戞枃鏈潏鎾冲弳濡?
-
-    
-
     self.char_inv_text = ctk.CTkTextbox(char_inv_frame, height=60, wrap="word", font=("Microsoft YaHei", 12))
-
     install_text_shortcuts(self.char_inv_text)
-
     self.char_inv_text.grid(row=0, column=0, padx=(0,5), pady=5, sticky="nsew")
 
     if hasattr(self, 'characters_involved_var'):
-
         self.char_inv_text.insert("0.0", self.characters_involved_var.get())
 
-    
-
-    # 瀵煎叆鎸夐挳
-
-    import_btn = ctk.CTkButton(char_inv_frame, text=t("瀵煎叆"), width=60, 
-
-                             command=self.show_character_import_window,
-
-                             font=("Microsoft YaHei", 12))
-
+    # ????
+    import_btn = ctk.CTkButton(char_inv_frame, text=t("??"), width=80, command=self.show_character_import_window, font=("Microsoft YaHei", 12))
     import_btn.grid(row=0, column=1, padx=(0,5), pady=5, sticky="e")
 
+    # ??????????????
+    select_btn = ctk.CTkButton(char_inv_frame, text=t("??????"), width=120, command=self.open_character_select_dialog, font=("Microsoft YaHei", 12))
+    select_btn.grid(row=0, column=2, padx=(5,0), pady=5, sticky="e")
+
     row_idx += 1
+
+
+
+
 
 
     key_items_entry = ctk.CTkEntry(self.params_frame, textvariable=self.key_items_var, font=("Microsoft YaHei", 12))
@@ -220,7 +212,7 @@ def build_optional_buttons_area(self, start_row=2):
 
     self.optional_btn_frame.grid(row=start_row, column=0, sticky="ew", padx=5, pady=5)
 
-    self.optional_btn_frame.columnconfigure((0, 1, 2, 3, 4, 5, 6), weight=1)
+    self.optional_btn_frame.columnconfigure((0, 1, 2, 3, 4, 5, 6, 7), weight=1)
 
 
 
@@ -297,6 +289,12 @@ def build_optional_buttons_area(self, start_row=2):
     )
     self.btn_open_embed_dashboard.grid(row=0, column=6, padx=5, pady=5, sticky="ew")
 
+    # 角色审阅
+    self.btn_character_review = ctk.CTkButton(
+        self.optional_btn_frame, text=t("角色审阅"), command=self.open_character_review_dialog,
+        font=("Microsoft YaHei", 12), width=120
+    )
+    self.btn_character_review.grid(row=0, column=7, padx=5, pady=5, sticky="ew")
 
 
 def create_label_with_help_for_novel_params(self, parent, label_text, tooltip_key, row, column, font=None, sticky="e", padx=5, pady=5):
@@ -318,6 +316,9 @@ def create_label_with_help_for_novel_params(self, parent, label_text, tooltip_ke
     btn.pack(side="left", padx=3)
 
     return frame
+
+
+
 
 
 
