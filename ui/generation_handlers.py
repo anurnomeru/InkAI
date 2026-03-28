@@ -966,38 +966,79 @@ def show_plot_arcs_ui(self):
     text_area.insert("0.0", arcs_text)
     text_area.configure(state="disabled")
 def rebuild_full_vectorstore_ui(self):
-    """当向量库为空时，手动触发一次全量重建。复用既有重建逻辑，不引入新机制。"""
+    """当向量库为空时，手动触发一次全量重建（后台线程），避免卡死。"""
     filepath = self.filepath_var.get().strip()
     if not filepath:
         messagebox.showwarning("警告", "请先配置保存文件路径。")
         return
 
-    try:
-        from novel_generator.vectorstore_utils import vector_store_is_empty
-        from embedding_adapters import create_embedding_adapter
-        adapter = create_embedding_adapter(
-            self.embedding_interface_format_var.get().strip(),
-            self.embedding_api_key_var.get().strip(),
-            self.embedding_url_var.get().strip(),
-            self.embedding_model_name_var.get().strip(),
-        )
-        from novel_generator.vectorstore_utils import rebuild_vector_store_from_chapters as _rebuild
-        # 若已存在，则按约定不重复重建；若为空，则执行一次全量重建
-        if vector_store_is_empty(filepath):
-            self.safe_log('当前不存在向量库，开始全量重建...')
+    def _task():
+        import time
+        t0 = time.perf_counter()
+        try:
+            # 禁用两个入口按钮，防止重复点击
+            try:
+                if hasattr(self, 'btn_clear_vectorstore') and self.btn_clear_vectorstore:
+                    self.disable_button_safe(self.btn_clear_vectorstore)
+                if hasattr(self, 'btn_clear_vectorstore_chapters') and self.btn_clear_vectorstore_chapters:
+                    self.disable_button_safe(self.btn_clear_vectorstore_chapters)
+            except Exception:
+                pass
+
+            try:
+                from novel_generator.vectorstore_utils import vector_store_is_empty
+                empty = vector_store_is_empty(filepath)
+            except Exception:
+                empty = True
+            if not empty:
+                self.safe_log('向量库已存在，无需重建。如需重建请先清空。')
+                return
+
+            self.safe_log('开始全量重建向量库...')
+            # 记录参数，便于排查
+            try:
+                self.safe_log(f'Embedding: IF={self.embedding_interface_format_var.get().strip()} MODEL={self.embedding_model_name_var.get().strip()} URL={self.embedding_url_var.get().strip()}')
+            except Exception:
+                pass
+
+            from embedding_adapters import create_embedding_adapter
+            adapter = create_embedding_adapter(
+                self.embedding_interface_format_var.get().strip(),
+                self.embedding_api_key_var.get().strip(),
+                self.embedding_url_var.get().strip(),
+                self.embedding_model_name_var.get().strip(),
+            )
+            from novel_generator.vectorstore_utils import rebuild_vector_store_from_chapters as _rebuild
+            t1 = time.perf_counter()
             ok = _rebuild(adapter, filepath)
+            dt = time.perf_counter() - t1
             if ok:
-                self.safe_log('✅ 向量库已全量重建完成。')
+                self.safe_log(f'✅ 向量库已全量重建完成（耗时 {dt:.2f}s）。')
             else:
                 self.safe_log('⚠️ 无需重建或无可用章节。')
-        else:
-            self.safe_log('向量库已存在，无需重建。如需重建请先清空。')
-    except Exception:
-        self.handle_exception('检查/重建向量库时出错')
-    finally:
+        except Exception:
+            self.handle_exception('检查/重建向量库时出错')
+        finally:
+            try:
+                self.master.after(0, getattr(self, 'update_vectorstore_button', lambda: None))
+            except Exception:
+                pass
+            try:
+                if hasattr(self, 'btn_clear_vectorstore') and self.btn_clear_vectorstore:
+                    self.enable_button_safe(self.btn_clear_vectorstore)
+                if hasattr(self, 'btn_clear_vectorstore_chapters') and self.btn_clear_vectorstore_chapters:
+                    self.enable_button_safe(self.btn_clear_vectorstore_chapters)
+            except Exception:
+                pass
+
+    try:
+        import threading
+        threading.Thread(target=_task, daemon=True).start()
+    except Exception as e:
         try:
-            self.master.after(0, getattr(self, 'update_vectorstore_button', lambda: None))
+            if hasattr(self, 'btn_clear_vectorstore') and self.btn_clear_vectorstore:
+                self.enable_button_safe(self.btn_clear_vectorstore)
         except Exception:
             pass
-
+        messagebox.showerror("错误", f"线程启动失败: {str(e)}")
 
