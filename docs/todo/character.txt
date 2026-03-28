@@ -122,3 +122,115 @@
 - 字段 Schema 固定 vs 可配置？（先内置，后放开）
 - 多项目共享角色资产的需求？（后续支持导入/导出包）
 - 角色与“叙事图谱”的关系：是否建立统一实体图（可在 M3 评审）
+
+—— 补充：管理功能与界面设计（v1） ——
+
+A. 信息架构与角色生命周期
+- 实体层级：角色（Character）→ 字段组（Basic/Attributes/Relationships/Timeline/Notes/Tags）→ 字段项。
+- 生命周期：新建 → 编辑（Manual）/抽取（Auto）→ 审阅合并 → 生效（Effective）→ 检索与提示 → 维护/回滚。
+- 权限与来源：字段级来源标记（manual/auto@chapterN），Manual 可“锁定”（Lock）禁止被 Auto 覆盖；所有采纳动作写入审计（index.json）。
+
+B. 管理功能（按优先级）
+1) 角色 CRUD
+  - 新建/重命名/删除/移动分类（支持多标签 Tag，分类为单一层次，Tag 可多选）。
+  - 合并重复：按 name/aliases 相似度给出候选，用户选择 A←B 合并（保留 A 的 ID；字段按来源策略合并）。
+2) 字段编辑与锁定
+  - 字段类型：string、string[]、kv-map、timeline（when/where/what/ref_chapter）。
+  - 锁定字段：勾选后不再被 Auto 层改写（除非用户显式“解锁”）。
+3) 自动抽取审阅（Review Queue）
+  - 按章节分组展示 Auto 增量：新增/变更/关系变更/时间线事件。
+  - 字段级“采纳到 Manual”复选框；支持“全选采纳/仅变更采纳”。
+  - 差异视图：左 Manual、右 Auto@chapterN，高亮差异；支持一键采纳或忽略。
+4) 批量操作
+  - 批量加/删 Tag，批量移动分类，批量锁定字段（如 summary/relationships）。
+  - 批量导入（txt/docx/md）：解析 → 批量审核 → 批量落库。
+5) 检索与导航
+  - 顶部搜索框（Name/Alias/Tag/字段内容），支持正则/拼音首字母；快速跳转最近编辑/最近出现章节。
+6) 版本与回滚
+  - Manual 层保留最近 N 个版本（默认 5），支持单字段回滚与整卡回滚。
+7) 与写作联动
+  - “从角色库选择”弹窗：左侧列表 + 右侧预览 + 多选，支持按“最近出现/Tag/相关性”排序；确定后回填到“参与角色”。
+  - 自动候选：在草稿页以灰色提示展示系统推荐（可一键采纳）。
+8) 与向量库联动
+  - 保存/采纳后触发向量增量更新（source:'character', character_id, active:true, version）。
+  - 页面内提供“刷新角色向量”与“仅角色检索 Top-K”调试入口。
+
+C. 存储与文件结构（细化）
+- characters/
+  - manual/<id>.json         // 字段：见“字段建议”；含 locked: {field: true}
+  - auto/<chapter>/<id>.json // 仅包含从该章抽取到的增量字段 + meta: {chapter, extracted_at}
+  - index.json               // { characters:[{id,name,aliases,tags,updated_at,latest_source,manual_locked_fields[]}], tags:[], stats:{} }
+- 示例（manual/<id>.json）：
+  {
+    "id":"lin_yue",
+    "name":"林越","aliases":["阿越"],
+    "summary":"……",
+    "attributes":{ "性格":["克制","记仇"],"能力":["刀术"] },
+    "relationships":{ "苏锦":"同门旧识" },
+    "timeline":[{"when":"第5章","what":"与苏锦重逢","ref_chapter":5}],
+    "tags":["正派"],
+    "locked":{"summary":true},
+    "source":"manual","updated_at":"2026-03-28T10:20:00+08:00"
+  }
+
+D. 界面设计（CustomTkinter 版）
+1) 主窗口布局
+- 顶栏：搜索（⌘/Ctrl+K）、过滤（来源: All/Manual/Auto/Eff；Tag 多选）、按钮：新建角色/导入/合并重复/校验/刷新向量。
+- 左栏（角色列表，固定宽度 320）：
+  - 列表项：name + tags + 最近章节徽标；右键：重命名/删除/移动/合并。
+  - 统计：总数、筛选后数量、最近更新时间。
+- 右侧（编辑器，分 Tab）：
+  - Basic：name/aliases/tags/summary（Markdown 编辑器）
+  - Attributes：分组表格（键→多值），支持新增组与条目，条目可拖拽排序；锁定按钮。
+  - Relationships：表格（target→描述），可从库内选择 target；显示联动回指。
+  - Timeline：事件列表（when/where/what/ref_chapter），支持按章过滤；从章节定位跳转。
+  - Review（仅当有待审条目）：Auto@chapterN → 差异视图 → 选择采纳 → 一键应用。
+  - JSON（开发者）：直接查看合成后的 Effective JSON（只读），便于排查。
+- 底部状态栏：当前角色 ID、来源覆盖比（Manual vs Auto）、未处理审阅条目数、向量状态。
+
+2) 交互细节与快捷键
+- 新建（Ctrl+N）、保存（Ctrl+S）、搜索（Ctrl+K）、采纳全部（Ctrl+Shift+Y）、锁定/解锁字段（L）。
+- 双击左侧项 → 打开 Basic；中键新标签页（可选）。
+- 悬浮显示字段来源：manual / auto@chapterN；点击来源可定位到该章节或审阅视图。
+
+3) “从角色库选择”弹窗
+- 左：可筛选列表（支持多选、排序：最近出现/相关性/名称）。
+- 右：合成视图预览；勾选“注入摘要/关系/时间线片段”。
+- 底：确定/取消；确定后把选中的 name 回填“参与角色”。
+
+4) 审阅面板（Review Queue）
+- 章节筛选（多选），分组展示字段差异卡片：字段名 / Manual 值 / Auto@chapter 值。
+- 操作：采纳到 Manual、忽略、稍后提醒；支持“仅新增”“仅变更”。
+
+E. 模块与 API（实现建议）
+- character_store.py：
+  - load_index/save_index、load_manual/save_manual、list_auto(chapter?)、save_auto、
+    build_effective(character_id)、merge_effective(all?)（带缓存）。
+- character_extract.py：
+  - extract_from_chapter(chapter_text, chapter_num) → {id→partial_fields}
+  - validate_against_schema(data)；失败降级解析器。
+- character_merge.py：
+  - merge(manual, auto_list, locks) → effective, diff（按前述规则）。
+- ui/role_library2.py（新）：
+  - UI 组件：ListPanel、EditorTabs（Basic/Attributes/Relationships/Timeline/Review/JSON）、
+    SelectDialog、DiffViewer。
+- integration hooks：
+  - finalize_chapter_ui → trigger extract → save auto → rebuild effective → update vectorstore。
+  - build_chapter_prompt → open SelectDialog（回填参与角色）；并读取 Effective 注入关键信息。
+
+F. 校验与工具
+- 校验命令：tools/validate_characters.py（检查编码/必填/引用有效/重复 ID/锁定覆盖冲突）。
+- 迁移命令：tools/migrate_character_state.py（character_state.txt → auto/legacy/）。
+
+G. 性能与缓存
+- LRU 缓存：effective-by-id、最近章节的 auto-list；编辑/采纳后局部失效。
+- 大规模项目：列表虚拟化（按需渲染）、搜索异步、写盘节流（debounce 1s）。
+
+H. 风险与权衡
+- 字段 schema 先固定，避免解析器复杂度爆炸；后续开放自定义。
+- 审阅粒度控制：默认字段级，必要时允许条目级（timeline event）。
+
+I. 验收口径（M1）
+- 可新建/编辑/保存 Manual；能导入 character_state.txt 并生成 auto/legacy/。
+- build_effective 正确体现“Manual 优先 + Auto 叠加”；UI 能切换 Manual/Auto/Effective 视图并展示来源标记。
+- 从角色库选择回填“参与角色”；保存/采纳后角色向量更新；日志可追踪。
