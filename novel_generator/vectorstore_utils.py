@@ -1,4 +1,4 @@
-#novel_generator/vectorstore_utils.py
+﻿#novel_generator/vectorstore_utils.py
 # -*- coding: utf-8 -*-
 # Vector store related operations (init, update, search, clear).
 import os
@@ -17,15 +17,15 @@ import requests
 import warnings
 from langchain_chroma import Chroma
 logging.basicConfig(
-    filename='app.log',      # 鏃ュ織鏂囦欢鍚?
-    filemode='a',            # 杩藉姞妯″紡锛?w' 浼氳鐩栵級
-    level=logging.INFO,      # 璁板綍 INFO 鍙婁互涓婄骇鍒殑鏃ュ織
+    filename='app.log',      # 閺冦儱绻旈弬鍥︽閸?
+    filemode='a',            # 鏉╄棄濮炲Ο鈥崇础閿?w' 娴兼俺顩惄鏍电礆
+    level=logging.INFO,      # 鐠佹澘缍?INFO 閸欏﹣浜掓稉濠勯獓閸掝偆娈戦弮銉ョ箶
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
-# 绂佺敤鐗瑰畾鐨凾orch璀﹀憡
+# 缁備胶鏁ら悧鐟扮暰閻ㄥ嚲orch鐠€锕€鎲?
 warnings.filterwarnings('ignore', message='.*Torch was not compiled with flash attention.*')
-os.environ["TOKENIZERS_PARALLELISM"] = "false"  # 绂佺敤tokenizer骞惰璀﹀憡
+os.environ["TOKENIZERS_PARALLELISM"] = "false"  # 缁備胶鏁okenizer楠炴儼顢戠拃锕€鎲?
 
 from chromadb.config import Settings
 from langchain.docstore.document import Document
@@ -48,7 +48,7 @@ def clear_vector_store(filepath: str) -> bool:
         logging.info(f"Vector store directory '{store_dir}' removed.")
         return True
     except Exception as e:
-        logging.error(f"鏃犳硶鍒犻櫎鍚戦噺搴撴枃浠跺す锛岃鍏抽棴绋嬪簭鍚庢墜鍔ㄥ垹闄?{store_dir}銆俓n {str(e)}")
+        logging.error(f"閺冪姵纭堕崚鐘绘珟閸氭垿鍣烘惔鎾存瀮娴犺泛銇欓敍宀冾嚞閸忔娊妫寸粙瀣碍閸氬孩澧滈崝銊ュ灩闂?{store_dir}閵嗕繐n {str(e)}")
         traceback.print_exc()
         return False
 
@@ -152,7 +152,7 @@ def split_text_for_vectorstore(chapter_text: str, max_length: int = 500, similar
     if not chapter_text or not str(chapter_text).strip():
         return []
     def _regex_sentences(t: str):
-        parts = re.split(r"(?<=[。！？!\?；;：:])\s+|\n+", t)
+        parts = re.split(r"(?<=[銆傦紒锛?\?锛?锛?])\s+|\n+", t)
         return [p.strip() for p in parts if p and p.strip()]
     sentences = None
     if '_HAVE_NLTK' in globals() and _HAVE_NLTK:
@@ -183,7 +183,7 @@ def split_text_for_vectorstore(chapter_text: str, max_length: int = 500, similar
 
 def update_vector_store(embedding_adapter, new_chapter: str, filepath: str):
     # Insert new chapter segments into the vector store (init if needed).
-    # 鑻ュ簱涓嶅瓨鍦ㄥ垯鍒濆鍖栵紱鑻ュ垵濮嬪寲/鏇存柊澶辫触锛屽垯璺宠繃銆?
+    # 閼汇儱绨辨稉宥呯摠閸︺劌鍨崚婵嗩潗閸栨牭绱遍懟銉ュ灥婵瀵?閺囧瓨鏌婃径杈Е閿涘苯鍨捄瀹犵箖閵?
     from utils import read_file, clear_file_content, save_string_to_txt
     splitted_texts = split_text_for_vectorstore(new_chapter)
     if not splitted_texts:
@@ -209,9 +209,9 @@ def update_vector_store(embedding_adapter, new_chapter: str, filepath: str):
         traceback.print_exc()
 
 def get_relevant_context_from_vector_store(embedding_adapter, query: str, filepath: str, k: int = 2, exclude_text: str | None = None) -> str:
-    # 从向量库中检索与 query 最相关的 k 段文本，拼接返回。
-    # 可选 exclude_text：若提供，则会过滤掉与之完全子串匹配的片段（用于排除“当前章节废稿”）。
-    # 最终仅返回 <=2000 字符的拼接文本。
+    # 浠庡悜閲忓簱涓绱笌 query 鏈€鐩稿叧鐨?k 娈垫枃鏈紝鎷兼帴杩斿洖銆?
+    # 鍙€?exclude_text锛氳嫢鎻愪緵锛屽垯浼氳繃婊ゆ帀涓庝箣瀹屽叏瀛愪覆鍖归厤鐨勭墖娈碉紙鐢ㄤ簬鎺掗櫎鈥滃綋鍓嶇珷鑺傚簾绋库€濓級銆?
+    # 鏈€缁堜粎杩斿洖 <=2000 瀛楃鐨勬嫾鎺ユ枃鏈€?
     store = load_vector_store(embedding_adapter, filepath)
     if not store:
         logging.info("No vector store found or load failed. Returning empty context.")
@@ -222,7 +222,7 @@ def get_relevant_context_from_vector_store(embedding_adapter, query: str, filepa
         if not docs:
             logging.info(f"No relevant documents found for query '{query}'. Returning empty context.")
             return ""
-        # 过滤当前章节可能的废稿（启发式：完全子串匹配）
+        # 杩囨护褰撳墠绔犺妭鍙兘鐨勫簾绋匡紙鍚彂寮忥細瀹屽叏瀛愪覆鍖归厤锛?
         if exclude_text:
             try:
                 excl = exclude_text
@@ -246,11 +246,11 @@ def get_relevant_context_from_vector_store(embedding_adapter, query: str, filepa
 def _get_sentence_transformer(model_name: str = 'paraphrase-MiniLM-L6-v2'):
     # Load sentence transformer model (handles SSL)
     try:
-        # 璁剧疆torch鐜鍙橀噺
+        # 鐠佸墽鐤唗orch閻滎垰顣ㄩ崣姗€鍣?
         os.environ["TORCH_ALLOW_TF32_CUBLAS_OVERRIDE"] = "0"
         os.environ["TORCH_CUDNN_V8_API_ENABLED"] = "0"
         
-        # 绂佺敤SSL楠岃瘉
+        # 缁備胶鏁SL妤犲矁鐦?
         ssl._create_default_https_context = ssl._create_unverified_context
         
         # ...existing code...
@@ -260,3 +260,96 @@ def _get_sentence_transformer(model_name: str = 'paraphrase-MiniLM-L6-v2'):
         return None
 
 
+
+
+def vector_store_is_empty(filepath: str) -> bool:
+    store_dir = get_vectorstore_dir(filepath)
+    if not os.path.isdir(store_dir):
+        return True
+    for _, _, files in os.walk(store_dir):
+        if files:
+            return False
+    return True
+
+
+def rebuild_vector_store_from_chapters(embedding_adapter, filepath: str) -> bool:
+    """
+    Rebuild the vector store from all existing chapter_*.txt under <filepath>/chapters
+    Only runs when the store directory is missing or empty. Returns True on success.
+    """
+    try:
+        store_dir = get_vectorstore_dir(filepath)
+        # Only rebuild when empty / missing
+        if os.path.isdir(store_dir):
+            # if non-empty, do nothing
+            for _, _, files in os.walk(store_dir):
+                if files:
+                    logging.info("Vector store already present; skip full rebuild.")
+                    return False
+        chapters_dir = os.path.join(filepath, 'chapters')
+        if not os.path.isdir(chapters_dir):
+            logging.info("Chapters directory not found; nothing to rebuild.")
+            return False
+        # Collect texts from all chapter_N.txt
+        chapter_files = []
+        for name in os.listdir(chapters_dir):
+            if name.startswith('chapter_') and name.endswith('.txt') and name.count('_') == 1:
+                try:
+                    num = int(name.split('_')[1].split('.')[0])
+                except Exception:
+                    continue
+                chapter_files.append((num, os.path.join(chapters_dir, name)))
+        if not chapter_files:
+            logging.info("No chapter files found for rebuild.")
+            return False
+        chapter_files.sort(key=lambda x: x[0])
+        all_segments = []
+        for _, full in chapter_files:
+            try:
+                with open(full, 'r', encoding='utf-8', errors='ignore') as f:
+                    txt = f.read().strip()
+                segs = split_text_for_vectorstore(txt)
+                if segs:
+                    all_segments.extend([Document(page_content=str(s)) for s in segs])
+            except Exception:
+                continue
+        if not all_segments:
+            logging.info("No valid text segments to embed.")
+            return False
+        # Initialize vector store once with first batch, then add the rest if needed
+        from langchain.embeddings.base import Embeddings as LCEmbeddings
+        class LCEmbeddingWrapper(LCEmbeddings):
+            def embed_documents(self, texts):
+                return call_with_retry(
+                    func=embedding_adapter.embed_documents,
+                    max_retries=3,
+                    fallback_return=[],
+                    texts=texts
+                )
+            def embed_query(self, query: str):
+                return call_with_retry(
+                    func=embedding_adapter.embed_query,
+                    max_retries=3,
+                    fallback_return=[],
+                    query=query
+                )
+        chroma_embedding = LCEmbeddingWrapper()
+        os.makedirs(store_dir, exist_ok=True)
+        # Create store with first chunk to avoid too large single call
+        first_chunk = all_segments[:200]
+        rest = all_segments[200:]
+        vectorstore = Chroma.from_documents(
+            first_chunk,
+            embedding=chroma_embedding,
+            persist_directory=store_dir,
+            client_settings=Settings(anonymized_telemetry=False),
+            collection_name='novel_collection'
+        )
+        if rest:
+            vectorstore.add_documents(rest)
+        logging.info(f"Full vector store rebuilt from {len(chapter_files)} chapters, total segments: {len(all_segments)}")
+        return True
+    except Exception as e:
+        logging.error(f"Full rebuild failed: {e}")
+        traceback.print_exc()
+        return False
