@@ -316,6 +316,7 @@ def rebuild_vector_store_from_chapters(embedding_adapter, filepath: str, progres
     try:
         store_dir = get_vectorstore_dir(filepath)
         # Only rebuild when empty / missing
+        _progress(f'[重建] 目标向量库: {store_dir}')
         if os.path.isdir(store_dir):
             # if non-empty, do nothing
             for _, _, files in os.walk(store_dir):
@@ -323,6 +324,7 @@ def rebuild_vector_store_from_chapters(embedding_adapter, filepath: str, progres
                     logging.info("Vector store already present; skip full rebuild.")
                     return False
         chapters_dir = os.path.join(filepath, 'chapters')
+        _progress(f'[重建] 章节目录: {chapters_dir}')
         if not os.path.isdir(chapters_dir):
             logging.info("Chapters directory not found; nothing to rebuild.")
             return False
@@ -339,6 +341,15 @@ def rebuild_vector_store_from_chapters(embedding_adapter, filepath: str, progres
             logging.info("No chapter files found for rebuild.")
             return False
         chapter_files.sort(key=lambda x: x[0])
+        _progress(f'[重建] 发现章节: {len(chapter_files)} 个')
+        if chapter_files:
+            nums = [str(n) for n,_ in chapter_files]
+            if len(nums) > 20:
+                head = ','.join(nums[:10])
+                tail = ','.join(nums[-5:])
+                _progress(f'[重建] 章节列表: {head} ... {tail}')
+            else:
+                _progress(f"[重建] 章节列表: {','.join(nums)}")
         all_segments = []
         for _, full in chapter_files:
             try:
@@ -384,6 +395,8 @@ def rebuild_vector_store_from_chapters(embedding_adapter, filepath: str, progres
         )
         if rest:
             vectorstore.add_documents(rest)
+            _progress(f'[向量] 已写入全部文档，共 {len(all_docs)} 段')
+        else:
             _progress(f'[向量] 已写入全部文档，共 {len(all_docs)} 段')
         logging.info(f"Full vector store rebuilt from {len(chapter_files)} chapters, total segments: {len(all_segments)}")
         return True
@@ -476,12 +489,14 @@ def rebuild_vector_store_from_chapters(embedding_adapter, filepath: str, progres
     try:
         store_dir = get_vectorstore_dir(filepath)
         # Only rebuild when empty / missing
+        _progress(f'[重建] 目标向量库: {store_dir}')
         if os.path.isdir(store_dir):
             for _, _, files in os.walk(store_dir):
                 if files:
                     logging.info("Vector store already present; skip full rebuild.")
                     return False
         chapters_dir = os.path.join(filepath, 'chapters')
+        _progress(f'[重建] 章节目录: {chapters_dir}')
         if not os.path.isdir(chapters_dir):
             logging.info("Chapters directory not found; nothing to rebuild.")
             return False
@@ -507,6 +522,7 @@ def rebuild_vector_store_from_chapters(embedding_adapter, filepath: str, progres
                 segs = split_text_for_vectorstore(txt)
                 if not segs:
                     continue
+                _progress(f'[切片] 第{chap_num}章 → 段数={len(segs)} 累计={len(all_docs)+len(segs)}')
                 manifest["chapters"][str(chap_num)] = {"current_version": 1}
                 for idx, s in enumerate(segs):
                     all_docs.append(
@@ -545,6 +561,7 @@ def rebuild_vector_store_from_chapters(embedding_adapter, filepath: str, progres
         os.makedirs(store_dir, exist_ok=True)
         first_chunk = all_docs[:200]
         rest = all_docs[200:]
+        _progress(f'[Chroma] persist={store_dir} collection=novel_collection 首批={len(first_chunk)} 追加={len(rest)}')
         _progress(f'[向量] 正在初始化 Chroma 并写入首批文档...')
         vectorstore = Chroma.from_documents(
             first_chunk,
@@ -556,8 +573,10 @@ def rebuild_vector_store_from_chapters(embedding_adapter, filepath: str, progres
         if rest:
             vectorstore.add_documents(rest)
             _progress(f'[向量] 已写入全部文档，共 {len(all_docs)} 段')
+        else:
+            _progress(f'[向量] 已写入全部文档，共 {len(all_docs)} 段')
         save_manifest(manifest, filepath)
-        # manifest updated
+        _progress('[向量] manifest 已更新')
         logging.info(
             f"Full vector store rebuilt from {len(chapter_files)} chapters, total segments: {len(all_docs)}"
         )
