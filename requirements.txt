@@ -1,4 +1,4 @@
-aiohappyeyeballs==2.6.1
+﻿aiohappyeyeballs==2.6.1
 aiohttp==3.12.15
 aiosignal==1.4.0
 annotated-types==0.7.0
@@ -144,3 +144,7 @@ wheel==0.45.1
 yarl==1.20.1
 zipp==3.23.0
 zstandard==0.24.0
+
+streamlit>=1.36.0
+plotly>=5.20.0
+umap-learn>=0.5.5 ; python_version>='3.9'
