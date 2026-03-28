@@ -675,3 +675,4 @@ def index_chapter_version(embedding_adapter, chapter_number: int, chapter_text: 
         return False
 
 # ===== end overrides =====
+

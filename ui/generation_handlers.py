@@ -962,3 +962,4 @@ def rebuild_full_vectorstore_ui(self):
             self.master.after(0, getattr(self, 'update_vectorstore_button', lambda: None))
         except Exception:
             pass
+
