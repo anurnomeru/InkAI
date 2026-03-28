@@ -592,25 +592,33 @@ class NovelGeneratorGUI:
     
     def update_vectorstore_button(self):
         try:
-            if not hasattr(self, 'btn_clear_vectorstore') or self.btn_clear_vectorstore is None:
+            # 支持两个位置的按钮：Main 右侧(self.btn_clear_vectorstore) 与 Chapters 顶栏(self.btn_clear_vectorstore_chapters)
+            btns = []
+            for name in ('btn_clear_vectorstore', 'btn_clear_vectorstore_chapters'):
+                try:
+                    btn = getattr(self, name, None)
+                    if btn is not None:
+                        btns.append(btn)
+                except Exception:
+                    pass
+            if not btns:
                 return
             fp = (self.filepath_var.get() or '').strip() if hasattr(self, 'filepath_var') else ''
             if not fp:
-                try:
-                    self.btn_clear_vectorstore.configure(text=t('清空向量库'), fg_color='red', command=self.clear_vectorstore_handler)
-                except Exception:
-                    pass
+                for b in btns:
+                    try:
+                        b.configure(text=t('清空向量库'), fg_color='red', command=self.clear_vectorstore_handler)
+                    except Exception:
+                        pass
                 return
             from novel_generator.vectorstore_utils import vector_store_is_empty
             empty = vector_store_is_empty(fp)
-            if empty:
+            for b in btns:
                 try:
-                    self.btn_clear_vectorstore.configure(text=t('重建向量库'), fg_color=None, command=self.rebuild_full_vectorstore_ui)
-                except Exception:
-                    pass
-            else:
-                try:
-                    self.btn_clear_vectorstore.configure(text=t('清空向量库'), fg_color='red', command=self.clear_vectorstore_handler)
+                    if empty:
+                        b.configure(text=t('重建向量库'), fg_color=None, command=self.rebuild_full_vectorstore_ui)
+                    else:
+                        b.configure(text=t('清空向量库'), fg_color='red', command=self.clear_vectorstore_handler)
                 except Exception:
                     pass
         except Exception:

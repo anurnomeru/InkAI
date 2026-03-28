@@ -75,6 +75,30 @@ def build_chapters_tab(self):
 
     refresh_btn.grid(row=0, column=6, padx=5, pady=5, sticky="e")
 
+    # 向量库清空/重建按钮（与主界面一致的逻辑，文案由主窗口统一刷新）
+    try:
+        self.btn_clear_vectorstore_chapters
+    except Exception:
+        self.btn_clear_vectorstore_chapters = None
+    if self.btn_clear_vectorstore_chapters is None:
+        self.btn_clear_vectorstore_chapters = ctk.CTkButton(
+            top_frame,
+            text=t("清空向量库"),
+            command=self.clear_vectorstore_handler,
+            font=("Microsoft YaHei", 12)
+        )
+    # 放在右侧
+    try:
+        self.btn_clear_vectorstore_chapters.grid(row=0, column=7, padx=(5,5), pady=5, sticky="e")
+    except Exception:
+        pass
+    # 交由主窗口方法决定当前文案/命令
+    try:
+        self.update_vectorstore_button()
+    except Exception:
+        pass
+
+
 
 
     self.chapters_word_count_label = ctk.CTkLabel(top_frame, text=t("字数："), font=("Microsoft YaHei", 12))
