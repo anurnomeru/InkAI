@@ -99,3 +99,81 @@ UI 文字与兼容：
 - 当计数 = 1：按原有单次生成流程，直接把结果加载到编辑框。
 - 所有请求参数（接口、模型、温度、超时、max_tokens）严格跟随 UI 与当前配置，不做代码侧覆盖。
 
+
+---
+
+## UI 总览（Overview）
+- 主窗口：ui/main_window.py 使用 customtkinter 布局，核心为 CTkTabview。
+- 左侧（Main Functions → 左列）：
+  - 标题与字数：标签“本章内容（可编辑） 字数：{n}”。
+  - 主编辑框：self.chapter_result（可编辑）。
+  - Step 按钮：生成架构/目录/草稿/定稿、批量生成。
+  - Draft 变体区：下拉“Draft Variants:”、按钮“Refresh Variants”。
+  - 日志：只读文本框，配合 safe_log() 输出。
+- 右侧：参数与配置区域（LLM/Embedding/小说参数等子面板）。
+- 其他 Tab：
+  - Setting/Directory/Character/Summary/Chapters 等独立编辑页，均有各自的“保存修改”。
+
+## 新增：主编辑区保存（2026-03-28）
+为防止编辑后未落盘导致丢失，主编辑区加入“保存草稿”按钮与快捷键：
+- 入口
+  - 按钮：位于标题行右侧，文案“保存草稿”。
+  - 快捷键：在主编辑框内按 Ctrl+S。
+- 行为
+  - 函数：ui/main_tab.py: save_main_editor_content(self)。
+  - 目标文件：<filepath>/chapters/chapter_{章节号}.txt（UTF-8 覆盖写入）。
+  - 依赖：需先在右侧参数区设置“保存路径（filepath）”与“章节号（chapter_num）”。
+  - 成功：调用 safe_log() 输出“已保存本章到：…”，并刷新 Draft 变体下拉（可立即看到主稿）。
+  - 失败：弹出错误提示（多为路径或权限问题）。
+- 相关挂载
+  - ui/main_window.py 引入并挂到主类：save_main_editor_content = save_main_editor_content，供按钮/快捷键直接调用。
+
+## 文件与数据流（Storage & Data Flow）
+- 保存路径 <filepath> 下的主要文件：
+  - 小说架构：Novel_architecture.txt
+  - 目录蓝图：Novel_directory.txt
+  - 全局摘要：global_summary.txt
+  - 角色状态：character_state.txt
+  - 章节主稿：chapters/chapter_<n>.txt
+  - 章节草稿变体：chapters/_drafts/chapter_<n>_<k>.txt
+  - 剧情要点：plot_arcs.txt
+  - 向量库：vectorstore/（按实现细节组织）
+- 读写工具：utils.py 提供 read_file、clear_file_content、save_string_to_txt（UTF-8）。
+
+## 生成功能流水线（Steps）
+- Step1 架构 → Step2 目录 → Step3 草稿 → Step4 定稿；均在 ui/generation_handlers.py 中以线程运行，避免阻塞 UI。
+- 关键：
+  - 草稿生成：novel_generator.chapter.generate_chapter_draft()；可并发生成变体，统一写入 _drafts/。
+  - 提示词构建：build_chapter_prompt()，整合蓝图、前文摘要、知识检索与过滤（vectorstore_utils）。
+  - 定稿：finalize_chapter_ui() 写回主稿，并可更新全局摘要/角色状态/向量库。
+  - 一致性审校：consistency_checker.check_consistency() 独立入口。
+## Draft 变体机制（Variants）
+- 下拉列表包含：主稿 chapter_<n>.txt + 该章所有变体 chapter_<n>_<k>.txt（按文件名排序）。
+- 章节号/路径变化触发刷新：优先加载主稿，否则加载“最新”变体。
+- 切换下拉项 → 即时把对应文本加载到主编辑框（不自动写回）。
+
+## 配置体系（Config）
+- 文件：根目录 config.json。
+- 结构（核心字段）：
+  - llm_configs: { name: { api_key, base_url, model_name, temperature, max_tokens, timeout, interface_format } }
+  - embedding_configs: { name: { api_key, base_url, model_name, retrieval_k, interface_format } }
+  - choose_configs: { architecture_llm, chapter_outline_llm, final_chapter_llm, consistency_review_llm, prompt_draft_llm }
+  - other_params: { topic, genre, num_chapters, word_number, filepath, chapter_num, user_guidance, characters_involved, key_items, scene_location, time_constraint, draft_variants }
+- UI 统一读取并跟随用户配置，不在代码里“偷改”温度/超时等参数。
+
+## 国际化（i18n）
+- ui/i18n.py 提供 t()，从 ui/locales/zh_CN.json 取词条，未命中则原样返回。
+- 个别英文常量（如 Draft Variants）用于规避系统字体缺失导致的乱码。
+
+## 线程与 UI 安全（Threading & UI-Safe）
+- 长耗时操作在线程中执行；UI 更新通过 self.master.after(0, ...) 派发到主线程。
+- 通用封装：disable_button_safe/enable_button_safe/safe_log/handle_exception。
+
+## 现有独立保存点（Other Save Points）
+- Setting/Directory/Character/Summary/Chapters 各 Tab 内有对应“保存修改”，写回各自的 *.txt 文件。
+- 新增的主编辑区“保存草稿”仅负责章节主稿 chapter_<n>.txt 的快速保存。
+
+## 未来增强（Future）
+- 自动保存（间隔 N 分钟写入 _autosave/ 或临时文件，退出时提示恢复）。
+- 未保存变更提示（dirty 标记）。
+- 变体对比与合并工具；更丰富的变体排序与筛选。

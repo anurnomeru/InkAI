@@ -5,11 +5,11 @@
 import customtkinter as ctk
 
 from tkinter import messagebox
-
 from ui.context_menu import TextWidgetContextMenu
 from ui.i18n import t
-
 from ui.text_shortcuts import install_text_shortcuts
+from utils import save_string_to_txt, clear_file_content
+import os
 
 
 
@@ -68,13 +68,22 @@ def build_left_layout(self):
     self.left_frame.grid_rowconfigure(4, weight=0)
     self.left_frame.grid_rowconfigure(5, weight=1)
 
+    # Header: label + save button
+    header_frame = ctk.CTkFrame(self.left_frame)
+    header_frame.grid(row=0, column=0, sticky="ew", padx=5, pady=(5, 0))
+    header_frame.columnconfigure(0, weight=1)
     self.left_frame.columnconfigure(0, weight=1)
 
 
 
-    self.chapter_label = ctk.CTkLabel(self.left_frame, text=t("本章内容（可编辑） 字数："), font=("Microsoft YaHei", 12))
 
-    self.chapter_label.grid(row=0, column=0, padx=5, pady=(5, 0), sticky="w")
+
+    self.chapter_label = ctk.CTkLabel(header_frame, text=t("本章内容（可编辑） 字数："), font=("Microsoft YaHei", 12))
+
+    self.chapter_label.grid(row=0, column=0, padx=0, pady=0, sticky="w")
+    # 保存草稿按钮
+    self.btn_save_main = ctk.CTkButton(header_frame, text=t("保存草稿"), command=self.save_main_editor_content, font=("Microsoft YaHei", 12))
+    self.btn_save_main.grid(row=0, column=1, padx=5, pady=0, sticky="e")
 
 
 
@@ -109,6 +118,7 @@ def build_left_layout(self):
     self.chapter_result.bind("<KeyRelease>", update_word_count)
 
     self.chapter_result.bind("<ButtonRelease>", update_word_count)
+    self.chapter_result.bind("<Control-s>", lambda e: self.save_main_editor_content())
 
 
 
@@ -291,3 +301,34 @@ def build_right_layout(self):
 
 
 
+
+def save_main_editor_content(self):
+    filepath = self.filepath_var.get().strip() if hasattr(self, 'filepath_var') else ''
+    if not filepath:
+        try:
+            messagebox.showwarning(t("警告"), t("请先配置保存文件路径"))
+        except Exception:
+            pass
+        return
+    try:
+        chap_str = str(self.chapter_num_var.get()).strip() if hasattr(self, 'chapter_num_var') else '1'
+        chap_num = int(chap_str) if chap_str.isdigit() else 1
+    except Exception:
+        chap_num = 1
+    try:
+        os.makedirs(os.path.join(filepath, 'chapters'), exist_ok=True)
+        chapter_file = os.path.join(filepath, 'chapters', f"chapter_{chap_num}.txt")
+        content = self.chapter_result.get("0.0", "end").strip()
+        clear_file_content(chapter_file)
+        save_string_to_txt(content, chapter_file)
+        if hasattr(self, 'safe_log'):
+            self.safe_log(t("已保存本章到：") + chapter_file)
+        try:
+            self.refresh_draft_variants_list()
+        except Exception:
+            pass
+    except Exception:
+        try:
+            messagebox.showerror(t("错误"), t("保存失败，请检查保存路径或权限。"))
+        except Exception:
+            pass

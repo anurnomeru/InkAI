@@ -34,7 +34,7 @@ from tooltips import tooltips
 from ui.context_menu import TextWidgetContextMenu  
 from ui.i18n import t  
   
-from ui.main_tab import build_main_tab, build_left_layout, build_right_layout  
+from ui.main_tab import build_main_tab, build_left_layout, build_right_layout, save_main_editor_content  
   
 from ui.config_tab import build_config_tabview, load_config_btn, save_config_btn  
   
@@ -923,7 +923,10 @@ class NovelGeneratorGUI:
   
     test_embedding_config = test_embedding_config  
   
-    browse_folder = browse_folder  
+    browse_folder = browse_folder
+  
+    save_main_editor_content = save_main_editor_content  
+  
   
   
   
@@ -1021,7 +1024,7 @@ class NovelGeneratorGUI:
                 'characters_involved': self.characters_involved_var.get() if hasattr(self,'characters_involved_var') else '',  
                 'key_items': self.key_items_var.get() if hasattr(self,'key_items_var') else '',  
                 'scene_location': self.scene_location_var.get() if hasattr(self,'scene_location_var') else '',  
-                'time_constraint': self.time_constraint_var.get() if hasattr(self,'time_constraint_var') else '',,
+                'time_constraint': self.time_constraint_var.get() if hasattr(self,'time_constraint_var') else '',
                 'draft_variants': _safe_int(self.draft_variants_var, 3) if hasattr(self,'draft_variants_var') else 3
             }  
             cfg['other_params'] = other  
