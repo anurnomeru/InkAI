@@ -40,30 +40,18 @@ from ui.config_tab import build_config_tabview, load_config_btn, save_config_btn
   
 from ui.novel_params_tab import build_novel_params_area, build_optional_buttons_area  
   
-from ui.generation_handlers import (  
-
-    generate_novel_architecture_ui,  
-
-    generate_chapter_blueprint_ui,  
-
-    generate_chapter_draft_ui,  
-
-    finalize_chapter_ui,  
-
-    do_consistency_check,  
-
-    import_knowledge_handler,  
-
-    clear_vectorstore_handler,  
-
-    show_plot_arcs_ui,  
-
+from ui.generation_handlers import (
+    generate_novel_architecture_ui,
+    generate_chapter_blueprint_ui,
+    generate_chapter_draft_ui,
+    finalize_chapter_ui,
+    do_consistency_check,
+    import_knowledge_handler,
+    clear_vectorstore_handler,
+    show_plot_arcs_ui,
     generate_batch_ui,
-
-    rebuild_full_vectorstore_ui  
-
-    open_embed_dashboard_ui  
-
+    rebuild_full_vectorstore_ui,
+    open_embed_dashboard_ui
 )  
   
 from ui.setting_tab import build_setting_tab, load_novel_architecture, save_novel_architecture  
@@ -1187,6 +1175,8 @@ class NovelGeneratorGUI:
   
   
   
+
+
 
 
 
