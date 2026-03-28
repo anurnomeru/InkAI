@@ -359,7 +359,13 @@ class NovelGeneratorGUI:
   
         build_novel_params_area(self, start_row=1)  
   
-        build_optional_buttons_area(self, start_row=2)\r\n        # 初始化向量库按钮文案/功能（根据当前保存路径与是否存在向量库）\r\n        try:\r\n            self.update_vectorstore_button()\r\n        except Exception:\r\n            pass\r\n        build_setting_tab(self)  
+        build_optional_buttons_area(self, start_row=2)
+        # 初始化向量库按钮文案/功能（根据当前保存路径与是否存在向量库）
+        try:
+            self.update_vectorstore_button()
+        except Exception:
+            pass
+        build_setting_tab(self)  
   
         build_directory_tab(self)  
   
@@ -504,7 +510,15 @@ class NovelGeneratorGUI:
         except Exception:  
             pass  
   
-    def _on_filepath_changed(self):\r\n        try:\r\n            self._apply_latest_chapter_on_start()\r\n        except Exception:\r\n            pass\r\n        try:\r\n            self.update_vectorstore_button()\r\n        except Exception:\r\n            pass  
+    def _on_filepath_changed(self):
+        try:
+            self._apply_latest_chapter_on_start()
+        except Exception:
+            pass
+        try:
+            self.update_vectorstore_button()
+        except Exception:
+            pass  
   
     def _on_chapter_num_changed(self):  
         try:  
@@ -1161,6 +1175,7 @@ class NovelGeneratorGUI:
   
   
   
+
 
 
 
