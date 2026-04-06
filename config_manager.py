@@ -1,4 +1,4 @@
-﻿# config_manager.py
+# config_manager.py
 # -*- coding: utf-8 -*-
 import json
 import os
@@ -17,6 +17,7 @@ DEFAULT_LLM_ITEM = {
     "max_tokens": 8192,
     "timeout": 600,
     "interface_format": "OpenAI",
+    "agent": "",  # OpenCode 等 CLI 后端可使用的 agent 名称（可为空）
 }
 
 DEFAULT_CONFIG: Dict[str, Any] = {
@@ -25,6 +26,18 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "llm_configs": {
         # 至少有一个可用项，供 UI 直接取用
         "Default": dict(DEFAULT_LLM_ITEM),
+        "OpenCode": {
+            "api_key": os.environ.get("OPENCODE_API_KEY", ""),
+            "base_url": os.environ.get(
+                "OPENCODE_BASE_URL", "http://localhost:11434/v1"
+            ),
+            "model_name": "",  # 由 UI 按钮刷新后填入
+            "temperature": 0.7,
+            "max_tokens": 2048,
+            "timeout": 180,
+            "interface_format": "OpenCode",
+            "agent": os.environ.get("OPENCODE_AGENT", ""),
+        },
     },
     "embedding_configs": {
         "OpenAI": {
@@ -136,7 +149,10 @@ def _merge_defaults(cfg: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
         changed = True
     else:
         for k, v in DEFAULT_CONFIG["other_params"].items():
-            if k not in op or (k in ("num_chapters", "word_number") and (not op.get(k) or int(op.get(k) or 0) <= 0)):
+            if k not in op or (
+                k in ("num_chapters", "word_number")
+                and (not op.get(k) or int(op.get(k) or 0) <= 0)
+            ):
                 op[k] = v
                 changed = True
         if not op.get("chapter_num"):
@@ -145,17 +161,19 @@ def _merge_defaults(cfg: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
 
     # proxy/webdav 补齐
     if not isinstance(cfg.get("proxy_setting"), dict):
-        cfg["proxy_setting"] = dict(DEFAULT_CONFIG["proxy_setting"]) 
+        cfg["proxy_setting"] = dict(DEFAULT_CONFIG["proxy_setting"])
         changed = True
     if not isinstance(cfg.get("webdav_config"), dict):
-        cfg["webdav_config"] = dict(DEFAULT_CONFIG["webdav_config"]) 
+        cfg["webdav_config"] = dict(DEFAULT_CONFIG["webdav_config"])
         changed = True
 
     # last_* 字段兜底
     if not cfg.get("last_interface_format"):
-        cfg["last_interface_format"] = "OpenAI"; changed = True
+        cfg["last_interface_format"] = "OpenAI"
+        changed = True
     if not cfg.get("last_embedding_interface_format"):
-        cfg["last_embedding_interface_format"] = "OpenAI"; changed = True
+        cfg["last_embedding_interface_format"] = "OpenAI"
+        changed = True
 
     return cfg, changed
 
@@ -171,20 +189,20 @@ def load_config(config_file: str) -> Dict[str, Any]:
         create_config(config_file)
 
     try:
-        with open(config_file, 'r', encoding='utf-8') as f:
+        with open(config_file, "r", encoding="utf-8") as f:
             data = json.load(f)
     except Exception:
         # 备份坏文件
         try:
             if os.path.exists(config_file):
-                ts = time.strftime('%Y%m%d%H%M%S')
+                ts = time.strftime("%Y%m%d%H%M%S")
                 os.replace(config_file, f"{config_file}.{ts}.bak")
         except Exception:
             pass
         # 重建默认
-        create_config(config_file)
-        with open(config_file, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+        data = dict(DEFAULT_CONFIG)
+        save_config(data, config_file)
+        return data
 
     data, changed = _merge_defaults(data)
     if changed:
@@ -192,17 +210,15 @@ def load_config(config_file: str) -> Dict[str, Any]:
     return data
 
 
-def create_config(config_file: str) -> Dict[str, Any]:
-    """写入默认配置（若目录不存在则创建）。"""
-    os.makedirs(os.path.dirname(config_file) or '.', exist_ok=True)
-    save_config(dict(DEFAULT_CONFIG), config_file)
-    return dict(DEFAULT_CONFIG)
+def create_config(config_file: str) -> None:
+    with open(config_file, "w", encoding="utf-8") as f:
+        json.dump(DEFAULT_CONFIG, f, indent=2, ensure_ascii=False)
 
 
-def save_config(config_data: Dict[str, Any], config_file: str) -> bool:
+def save_config(data: Dict[str, Any], config_file: str) -> bool:
     try:
-        with open(config_file, 'w', encoding='utf-8') as f:
-            json.dump(config_data, f, ensure_ascii=False, indent=4)
+        with open(config_file, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
         return True
     except Exception:
         return False
@@ -210,9 +226,21 @@ def save_config(config_data: Dict[str, Any], config_file: str) -> bool:
 
 # ---------- 现有的配置测试函数，保持调用签名不变 ----------
 
-def test_llm_config(interface_format, api_key, base_url, model_name, temperature, max_tokens, timeout, log_func, handle_exception_func):
+
+def test_llm_config(
+    interface_format,
+    api_key,
+    base_url,
+    model_name,
+    temperature,
+    max_tokens,
+    timeout,
+    log_func,
+    handle_exception_func,
+):
     """测试当前的LLM配置是否可用（非阻塞）。"""
     import threading
+
     def task():
         try:
             log_func("开始测试LLM配置...")
@@ -235,12 +263,16 @@ def test_llm_config(interface_format, api_key, base_url, model_name, temperature
         except Exception as e:
             log_func(f"❌ LLM配置测试出错: {str(e)}")
             handle_exception_func("测试LLM配置时出错")
+
     threading.Thread(target=task, daemon=True).start()
 
 
-def test_embedding_config(api_key, base_url, interface_format, model_name, log_func, handle_exception_func):
+def test_embedding_config(
+    api_key, base_url, interface_format, model_name, log_func, handle_exception_func
+):
     """测试当前的Embedding配置是否可用（非阻塞）。"""
     import threading
+
     def task():
         try:
             log_func("开始测试Embedding配置...")
@@ -260,4 +292,5 @@ def test_embedding_config(api_key, base_url, interface_format, model_name, log_f
         except Exception as e:
             log_func(f"❌ Embedding配置测试出错: {str(e)}")
             handle_exception_func("测试Embedding配置时出错")
+
     threading.Thread(target=task, daemon=True).start()
