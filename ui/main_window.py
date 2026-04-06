@@ -860,7 +860,7 @@ class NovelGeneratorGUI:
             import_window.destroy()
 
         btn_confirm = ctk.CTkButton(
-            btn_frame, text=t("閫夋嫨"), command=confirm_selection
+            btn_frame, text=t("选择"), command=confirm_selection
         )
 
         btn_confirm.pack(side="left", padx=20)
