@@ -7,6 +7,7 @@ import datetime
 import customtkinter as ctk
 from config_manager import load_config, save_config
 from tooltips import tooltips
+from ui.i18n import t
 
 import os
 
@@ -40,7 +41,7 @@ def create_label_with_help(
         height=22,
         font=("Microsoft YaHei", 10),
         command=lambda: messagebox.showinfo(
-            "参数说明", tooltips.get(tooltip_key, "暂无说明")
+            t("参数说明"), tooltips.get(tooltip_key, t("暂无说明"))
         ),
     )
     btn.pack(side="left", padx=3)

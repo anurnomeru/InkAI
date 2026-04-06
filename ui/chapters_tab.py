@@ -3,6 +3,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import json
 
 import customtkinter as ctk
 
@@ -17,7 +18,7 @@ from utils import read_file, save_string_to_txt, clear_file_content
 
 
 def build_chapters_tab(self):
-    self.chapters_view_tab = self.tabview.add("Chapters Manage")
+    self.chapters_view_tab = self.tabview.add(t("章节管理"))
 
     self.chapters_view_tab.rowconfigure(0, weight=0)
 
@@ -166,11 +167,13 @@ def refresh_chapters_list(self):
     chapters_dir = os.path.join(filepath, "chapters")
 
     if not os.path.exists(chapters_dir):
-        self.safe_log("尚未找到 chapters 文件夹，请先生成章节或检查保存路径。")
-
-        self.chapter_select_menu.configure(values=[])
-
-        return
+        try:
+            os.makedirs(chapters_dir, exist_ok=True)
+            self.safe_log(t("已创建章节目录：{p}").format(p=chapters_dir))
+        except Exception:
+            self.safe_log(t("尚未找到 chapters 文件夹，请先生成章节或检查保存路径。"))
+            self.chapter_select_menu.configure(values=[])
+            return
 
     all_files = os.listdir(chapters_dir)
 
@@ -256,7 +259,7 @@ def save_current_chapter(self):
 
     save_string_to_txt(content, chapter_file)
 
-    self.safe_log(f"已保存樺第{chapter_number_str} 绔犵殑修改")
+    self.safe_log(t("已保存对第{n}章的修改").format(n=chapter_number_str))
 
 
 def prev_chapter(self):
