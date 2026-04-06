@@ -1,4 +1,4 @@
-﻿# ui/chapters_tab.py
+# ui/chapters_tab.py
 
 # -*- coding: utf-8 -*-
 
@@ -16,9 +16,7 @@ from ui.text_shortcuts import install_text_shortcuts
 from utils import read_file, save_string_to_txt, clear_file_content
 
 
-
 def build_chapters_tab(self):
-
     self.chapters_view_tab = self.tabview.add("Chapters Manage")
 
     self.chapters_view_tab.rowconfigure(0, weight=0)
@@ -26,8 +24,6 @@ def build_chapters_tab(self):
     self.chapters_view_tab.rowconfigure(1, weight=1)
 
     self.chapters_view_tab.columnconfigure(0, weight=1)
-
-
 
     top_frame = ctk.CTkFrame(self.chapters_view_tab)
 
@@ -43,35 +39,51 @@ def build_chapters_tab(self):
 
     top_frame.columnconfigure(4, weight=1)
 
-
-
-    prev_btn = ctk.CTkButton(top_frame, text=t("<< 上一章"), command=self.prev_chapter, font=("Microsoft YaHei", 12))
+    prev_btn = ctk.CTkButton(
+        top_frame,
+        text=t("<< 上一章"),
+        command=self.prev_chapter,
+        font=("Microsoft YaHei", 12),
+    )
 
     prev_btn.grid(row=0, column=0, padx=5, pady=5, sticky="w")
 
-
-
-    next_btn = ctk.CTkButton(top_frame, text=t("下一章 >>"), command=self.next_chapter, font=("Microsoft YaHei", 12))
+    next_btn = ctk.CTkButton(
+        top_frame,
+        text=t("下一章 >>"),
+        command=self.next_chapter,
+        font=("Microsoft YaHei", 12),
+    )
 
     next_btn.grid(row=0, column=1, padx=5, pady=5, sticky="w")
 
-
-
     self.chapter_select_var = ctk.StringVar(value="")
 
-    self.chapter_select_menu = ctk.CTkOptionMenu(top_frame, values=[], variable=self.chapter_select_var, command=self.on_chapter_selected, font=("Microsoft YaHei", 12))
+    self.chapter_select_menu = ctk.CTkOptionMenu(
+        top_frame,
+        values=[],
+        variable=self.chapter_select_var,
+        command=self.on_chapter_selected,
+        font=("Microsoft YaHei", 12),
+    )
 
     self.chapter_select_menu.grid(row=0, column=2, padx=5, pady=5, sticky="w")
 
-
-
-    save_btn = ctk.CTkButton(top_frame, text=t("保存修改"), command=self.save_current_chapter, font=("Microsoft YaHei", 12))
+    save_btn = ctk.CTkButton(
+        top_frame,
+        text=t("保存修改"),
+        command=self.save_current_chapter,
+        font=("Microsoft YaHei", 12),
+    )
 
     save_btn.grid(row=0, column=3, padx=5, pady=5, sticky="w")
 
-
-
-    refresh_btn = ctk.CTkButton(top_frame, text=t("刷新章节列表"), command=self.refresh_chapters_list, font=("Microsoft YaHei", 12))
+    refresh_btn = ctk.CTkButton(
+        top_frame,
+        text=t("刷新章节列表"),
+        command=self.refresh_chapters_list,
+        font=("Microsoft YaHei", 12),
+    )
 
     refresh_btn.grid(row=0, column=6, padx=5, pady=5, sticky="e")
 
@@ -85,11 +97,13 @@ def build_chapters_tab(self):
             top_frame,
             text=t("清空向量库"),
             command=self.clear_vectorstore_handler,
-            font=("Microsoft YaHei", 12)
+            font=("Microsoft YaHei", 12),
         )
     # 放在右侧
     try:
-        self.btn_clear_vectorstore_chapters.grid(row=0, column=7, padx=(5,5), pady=5, sticky="e")
+        self.btn_clear_vectorstore_chapters.grid(
+            row=0, column=7, padx=(5, 5), pady=5, sticky="e"
+        )
     except Exception:
         pass
     # 交由主窗口方法决定当前文案/命令
@@ -98,40 +112,38 @@ def build_chapters_tab(self):
     except Exception:
         pass
 
+    self.chapters_word_count_label = ctk.CTkLabel(
+        top_frame, text=t("字数："), font=("Microsoft YaHei", 12)
+    )
 
-
-
-    self.chapters_word_count_label = ctk.CTkLabel(top_frame, text=t("字数："), font=("Microsoft YaHei", 12))
-
-    self.chapters_word_count_label.grid(row=0, column=4, padx=(0,10), sticky="e")
+    self.chapters_word_count_label.grid(row=0, column=4, padx=(0, 10), sticky="e")
     # 已定稿提示（章节管理）
     try:
         self.chapters_finalized_label
     except Exception:
         self.chapters_finalized_label = None
     if self.chapters_finalized_label is None:
-        self.chapters_finalized_label = ctk.CTkLabel(top_frame, text="", text_color="green", font=("Microsoft YaHei", 12))
-    self.chapters_finalized_label.grid(row=0, column=5, padx=(10,0), pady=5, sticky="w")
+        self.chapters_finalized_label = ctk.CTkLabel(
+            top_frame, text="", text_color="green", font=("Microsoft YaHei", 12)
+        )
+    self.chapters_finalized_label.grid(
+        row=0, column=5, padx=(10, 0), pady=5, sticky="w"
+    )
 
-
-
-    
-
-    self.chapter_view_text = ctk.CTkTextbox(self.chapters_view_tab, wrap="word", font=("Microsoft YaHei", 12))
+    self.chapter_view_text = ctk.CTkTextbox(
+        self.chapters_view_tab, wrap="word", font=("Microsoft YaHei", 12)
+    )
 
     install_text_shortcuts(self.chapter_view_text)
 
-    
-
     def update_word_count(event=None):
-
         text = self.chapter_view_text.get("0.0", "end-1c")
 
         text_length = len(text)
 
-        self.chapters_word_count_label.configure(text=t("字数：{n}").format(n=text_length))
-
-    
+        self.chapters_word_count_label.configure(
+            text=t("字数：{n}").format(n=text_length)
+        )
 
     self.chapter_view_text.bind("<KeyRelease>", update_word_count)
 
@@ -139,44 +151,36 @@ def build_chapters_tab(self):
 
     TextWidgetContextMenu(self.chapter_view_text)
 
-    self.chapter_view_text.grid(row=1, column=0, sticky="nsew", padx=5, pady=5, columnspan=6)
-
-
+    self.chapter_view_text.grid(
+        row=1, column=0, sticky="nsew", padx=5, pady=5, columnspan=6
+    )
 
     self.chapters_list = []
 
     refresh_chapters_list(self)
 
 
-
 def refresh_chapters_list(self):
-
     filepath = self.filepath_var.get().strip()
 
     chapters_dir = os.path.join(filepath, "chapters")
 
     if not os.path.exists(chapters_dir):
-
         self.safe_log("尚未找到 chapters 文件夹，请先生成章节或检查保存路径。")
 
         self.chapter_select_menu.configure(values=[])
 
         return
 
-
-
     all_files = os.listdir(chapters_dir)
 
     chapter_nums = []
 
     for f in all_files:
-
         if f.startswith("chapter_") and f.endswith(".txt"):
-
             number_part = f.replace("chapter_", "").replace(".txt", "")
 
             if number_part.isdigit():
-
                 chapter_nums.append(number_part)
 
     chapter_nums.sort(key=lambda x: int(x))
@@ -188,41 +192,34 @@ def refresh_chapters_list(self):
     current_selected = self.chapter_select_var.get()
 
     if current_selected not in self.chapters_list:
-
         if self.chapters_list:
-
             self.chapter_select_var.set(self.chapters_list[0])
 
             load_chapter_content(self, self.chapters_list[0])
             update_chapters_finalized_hint(self)
 
         else:
-
             self.chapter_select_var.set("")
 
             self.chapter_view_text.delete("0.0", "end")
 
 
-
 def on_chapter_selected(self, value):
-
     load_chapter_content(self, value)
     update_chapters_finalized_hint(self)
 
 
-
 def load_chapter_content(self, chapter_number_str):
-
     if not chapter_number_str:
-
         return
 
     filepath = self.filepath_var.get().strip()
 
-    chapter_file = os.path.join(filepath, "chapters", f"chapter_{chapter_number_str}.txt")
+    chapter_file = os.path.join(
+        filepath, "chapters", f"chapter_{chapter_number_str}.txt"
+    )
 
     if not os.path.exists(chapter_file):
-
         self.safe_log(f"章节文件 {chapter_file} 不存在！")
 
         return
@@ -234,26 +231,24 @@ def load_chapter_content(self, chapter_number_str):
     self.chapter_view_text.insert("0.0", content)
 
 
-
 def save_current_chapter(self):
-
     chapter_number_str = self.chapter_select_var.get()
 
     if not chapter_number_str:
-
-        messagebox.showwarning(t("警告"), t("尚未閫夋嫨章节：屾棤娉曚繚瀛樸€"))
+        messagebox.showwarning(t("警告"), t("尚未选择章节：无法保存"))
 
         return
 
     filepath = self.filepath_var.get().strip()
 
     if not filepath:
-
         messagebox.showwarning(t("警告"), t("请先配置保存文件路径"))
 
         return
 
-    chapter_file = os.path.join(filepath, "chapters", f"chapter_{chapter_number_str}.txt")
+    chapter_file = os.path.join(
+        filepath, "chapters", f"chapter_{chapter_number_str}.txt"
+    )
 
     content = self.chapter_view_text.get("0.0", "end").strip()
 
@@ -264,23 +259,18 @@ def save_current_chapter(self):
     self.safe_log(f"已保存樺第{chapter_number_str} 绔犵殑修改")
 
 
-
 def prev_chapter(self):
-
     if not self.chapters_list:
-
         return
 
     current = self.chapter_select_var.get()
 
     if current not in self.chapters_list:
-
         return
 
     idx = self.chapters_list.index(current)
 
     if idx > 0:
-
         new_idx = idx - 1
 
         self.chapter_select_var.set(self.chapters_list[new_idx])
@@ -288,27 +278,21 @@ def prev_chapter(self):
         load_chapter_content(self, self.chapters_list[new_idx])
 
     else:
-
         messagebox.showinfo(t("提示"), t("已经是第一章了"))
 
 
-
 def next_chapter(self):
-
     if not self.chapters_list:
-
         return
 
     current = self.chapter_select_var.get()
 
     if current not in self.chapters_list:
-
         return
 
     idx = self.chapters_list.index(current)
 
     if idx < len(self.chapters_list) - 1:
-
         new_idx = idx + 1
 
         self.chapter_select_var.set(self.chapters_list[new_idx])
@@ -316,37 +300,7 @@ def next_chapter(self):
         load_chapter_content(self, self.chapters_list[new_idx])
 
     else:
-
         messagebox.showinfo(t("提示"), t("已经是最后一章了"))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 def update_chapters_finalized_hint(self):
@@ -354,7 +308,10 @@ def update_chapters_finalized_hint(self):
         fp = (self.filepath_var.get() or "").strip()
         chap = str(self.chapter_select_var.get()).strip()
         if not (fp and chap):
-            if hasattr(self, "chapters_finalized_label") and self.chapters_finalized_label:
+            if (
+                hasattr(self, "chapters_finalized_label")
+                and self.chapters_finalized_label
+            ):
                 self.chapters_finalized_label.configure(text="")
             return
         status_file = os.path.join(fp, "chapters", "status.json")
@@ -368,6 +325,8 @@ def update_chapters_finalized_hint(self):
             except Exception:
                 finalized = False
         if hasattr(self, "chapters_finalized_label") and self.chapters_finalized_label:
-            self.chapters_finalized_label.configure(text=("已定稿" if finalized else ""))
+            self.chapters_finalized_label.configure(
+                text=("已定稿" if finalized else "")
+            )
     except Exception:
         pass

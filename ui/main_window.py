@@ -104,7 +104,7 @@ class NovelGeneratorGUI:
     def __init__(self, master):
         self.master = master
 
-        self.master.title("Novel Generator GUI")
+        self.master.title(t("小说生成器"))
 
         try:
             if os.path.exists("icon.ico"):
@@ -267,7 +267,7 @@ class NovelGeneratorGUI:
 
             self.topic_default = op.get("topic", "")
 
-            self.genre_var = ctk.StringVar(value=op.get("genre", "鐜勫够"))
+            self.genre_var = ctk.StringVar(value=op.get("genre", "玄幻"))
 
             self.num_chapters_var = ctk.StringVar(value=str(op.get("num_chapters", 10)))
 
@@ -308,7 +308,7 @@ class NovelGeneratorGUI:
         else:
             self.topic_default = ""
 
-            self.genre_var = ctk.StringVar(value="鐜勫够")
+            self.genre_var = ctk.StringVar(value="玄幻")
 
             self.num_chapters_var = ctk.StringVar(value="10")
 
