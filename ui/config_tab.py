@@ -55,12 +55,12 @@ def build_config_tabview(self):
     self.config_tabview = ctk.CTkTabview(self.config_frame)
     self.config_tabview.grid(row=0, column=0, sticky="we", padx=5, pady=5)
 
-    self.ai_config_tab = self.config_tabview.add("LLM Model settings")
-    self.embeddings_config_tab = self.config_tabview.add("Embedding settings")
-    self.config_choose = self.config_tabview.add("Config choose")
+    self.ai_config_tab = self.config_tabview.add(t("LLM 模型设置"))
+    self.embeddings_config_tab = self.config_tabview.add(t("向量嵌入设置"))
+    self.config_choose = self.config_tabview.add(t("配置选择"))
 
     # PenBo 增加代理功能支持
-    self.proxy_setting_tab = self.config_tabview.add("Proxy setting")
+    self.proxy_setting_tab = self.config_tabview.add(t("代理设置"))
 
     build_ai_config_tab(self)
     build_embeddings_config_tab(self)
