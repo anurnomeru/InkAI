@@ -329,7 +329,7 @@ class NovelGeneratorGUI:
 
             self.user_guidance_default = ""
 
-        # --------------- 鏁翠綋Tab甯冨眬 ---------------
+        # --------------- 整体Tab布局 ---------------
 
         # --- Choose configs StringVars (create if missing) ---
         try:
@@ -346,18 +346,35 @@ class NovelGeneratorGUI:
             self.embedding_choice_var = ctk.StringVar(
                 value=choose_configs.get("embedding_choice", last_embedding)
             )
-        self.tabview = ctk.CTkTabview(self.master)
 
+        # 新的信息架构：将配置抽离为顶层 Tab，主页右侧只保留高频“小说参数 + 可选操作”
+        self.config_as_tab = True
+
+        self.tabview = ctk.CTkTabview(self.master)
         self.tabview.pack(fill="both", expand=True)
 
         # 分步延迟构建各个标签页，确保事件循环有机会刷新，避免首屏“假死”
         def _run_build_steps():
             steps = []
+            # 1) 主要功能（左侧编辑 + 右侧参数/操作）
             steps.append(lambda: build_main_tab(self))
-            steps.append(lambda: build_config_tabview(self))
-            steps.append(lambda: build_novel_params_area(self, start_row=1))
-            steps.append(lambda: build_optional_buttons_area(self, start_row=2))
+
+            # 2) 顶层“配置中心”
+            def _build_config_center():
+                try:
+                    self.config_center_tab = self.tabview.add(t("配置中心"))
+                    # 在该顶层容器内构建原来的 AI/Embedding/选择/代理 四个子页
+                    build_config_tabview(self, parent=self.config_center_tab)
+                except Exception:
+                    if hasattr(self, "handle_exception"):
+                        self.handle_exception("Build Config Center failed")
+
+            steps.append(_build_config_center)
+            # 3) 主页右侧的“小说参数 + 可选操作”上移（无配置区占位，行号从 0 开始）
+            steps.append(lambda: build_novel_params_area(self, start_row=0))
+            steps.append(lambda: build_optional_buttons_area(self, start_row=1))
             steps.append(lambda: self._safe_update_vector_btn())
+            # 4) 其他功能页
             steps.append(lambda: build_setting_tab(self))
             steps.append(lambda: build_directory_tab(self))
             steps.append(lambda: build_character_tab(self))

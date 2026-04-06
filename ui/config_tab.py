@@ -49,12 +49,28 @@ def create_label_with_help(
     return frame
 
 
-def build_config_tabview(self):
+def build_config_tabview(self, parent=None):
     """
     创建包含 LLM Model settings 和 Embedding settings 的选项卡。
+    可通过 parent 指定承载容器；若未提供则回退到 self.config_frame。
     """
-    self.config_tabview = ctk.CTkTabview(self.config_frame)
-    self.config_tabview.grid(row=0, column=0, sticky="we", padx=5, pady=5)
+    if parent is None:
+        # 向后兼容：默认放到 main_tab 右侧配置区
+        parent = getattr(self, "config_frame", None)
+        if parent is None:
+            # 若没有 config_frame，则创建一个独立容器
+            parent = ctk.CTkFrame(
+                self.right_frame if hasattr(self, "right_frame") else self.master
+            )
+            parent.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
+
+    self.config_tabview = ctk.CTkTabview(parent)
+    self.config_tabview.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
+
+    if hasattr(parent, "grid_rowconfigure"):
+        parent.grid_rowconfigure(0, weight=1)
+    if hasattr(parent, "grid_columnconfigure"):
+        parent.grid_columnconfigure(0, weight=1)
 
     self.ai_config_tab = self.config_tabview.add(t("LLM 模型设置"))
     self.embeddings_config_tab = self.config_tabview.add(t("向量嵌入设置"))
@@ -207,18 +223,40 @@ def build_ai_config_tab(self):
             "interface_format": self.embedding_interface_format_var.get().strip(),
         }
         other_params = {
-            "topic": self.topic_text.get("0.0", "end").strip(),
-            "genre": self.genre_var.get(),
-            "num_chapters": self.safe_get_int(self.num_chapters_var, 1),
-            "word_number": self.safe_get_int(self.word_number_var, 10000),
-            "filepath": self.filepath_var.get(),
-            "chapter_num": self.chapter_num_var.get(),
-            "user_guidance": self.user_guide_text.get("0.0", "end").strip(),
-            "characters_involved": self.characters_involved_var.get(),
-            "key_items": self.key_items_var.get(),
-            "scene_location": self.scene_location_var.get(),
-            "time_constraint": self.time_constraint_var.get(),
-            "draft_variants": self.safe_get_int(self.draft_variants_var, 3),
+            "topic": self.topic_text.get("0.0", "end").strip()
+            if hasattr(self, "topic_text")
+            else "",
+            "genre": self.genre_var.get() if hasattr(self, "genre_var") else "",
+            "num_chapters": self.safe_get_int(self.num_chapters_var, 1)
+            if hasattr(self, "num_chapters_var")
+            else 1,
+            "word_number": self.safe_get_int(self.word_number_var, 10000)
+            if hasattr(self, "word_number_var")
+            else 10000,
+            "filepath": self.filepath_var.get()
+            if hasattr(self, "filepath_var")
+            else "",
+            "chapter_num": self.chapter_num_var.get()
+            if hasattr(self, "chapter_num_var")
+            else "1",
+            "user_guidance": self.user_guide_text.get("0.0", "end").strip()
+            if hasattr(self, "user_guide_text")
+            else "",
+            "characters_involved": self.characters_involved_var.get()
+            if hasattr(self, "characters_involved_var")
+            else "",
+            "key_items": self.key_items_var.get()
+            if hasattr(self, "key_items_var")
+            else "",
+            "scene_location": self.scene_location_var.get()
+            if hasattr(self, "scene_location_var")
+            else "",
+            "time_constraint": self.time_constraint_var.get()
+            if hasattr(self, "time_constraint_var")
+            else "",
+            "draft_variants": self.safe_get_int(self.draft_variants_var, 3)
+            if hasattr(self, "draft_variants_var")
+            else 3,
         }
         self.loaded_config["embedding_configs"][
             self.embedding_interface_format_var.get().strip()
@@ -1301,23 +1339,38 @@ def load_config_btn(self):
             )
             self.embedding_retrieval_k_var.set(str(emb_conf.get("retrieval_k", 4)))
         other_params = cfg.get("other_params", {})
-        self.topic_text.delete("0.0", "end")
-        self.topic_text.insert("0.0", other_params.get("topic", ""))
-        self.genre_var.set(other_params.get("genre", "玄幻"))
-        self.num_chapters_var.set(str(other_params.get("num_chapters", 1)))
-        self.word_number_var.set(str(other_params.get("word_number", 10000)))
-        self.filepath_var.set(other_params.get("filepath", ""))
-        self.chapter_num_var.set(str(other_params.get("chapter_num", "1")))
-        self.user_guide_text.delete("0.0", "end")
-        self.user_guide_text.insert("0.0", other_params.get("user_guidance", ""))
-        self.characters_involved_var.set(other_params.get("characters_involved", ""))
-        self.key_items_var.set(other_params.get("key_items", ""))
-        self.scene_location_var.set(other_params.get("scene_location", ""))
-        self.time_constraint_var.set(other_params.get("time_constraint", ""))
+        if hasattr(self, "topic_text"):
+            self.topic_text.delete("0.0", "end")
+            self.topic_text.insert("0.0", other_params.get("topic", ""))
+        if hasattr(self, "genre_var"):
+            self.genre_var.set(other_params.get("genre", "玄幻"))
+        if hasattr(self, "num_chapters_var"):
+            self.num_chapters_var.set(str(other_params.get("num_chapters", 1)))
+        if hasattr(self, "word_number_var"):
+            self.word_number_var.set(str(other_params.get("word_number", 10000)))
+        if hasattr(self, "filepath_var"):
+            self.filepath_var.set(other_params.get("filepath", ""))
+        if hasattr(self, "chapter_num_var"):
+            self.chapter_num_var.set(str(other_params.get("chapter_num", "1")))
+        if hasattr(self, "user_guide_text"):
+            self.user_guide_text.delete("0.0", "end")
+            self.user_guide_text.insert("0.0", other_params.get("user_guidance", ""))
+        if hasattr(self, "characters_involved_var"):
+            self.characters_involved_var.set(
+                other_params.get("characters_involved", "")
+            )
+        if hasattr(self, "key_items_var"):
+            self.key_items_var.set(other_params.get("key_items", ""))
+        if hasattr(self, "scene_location_var"):
+            self.scene_location_var.set(other_params.get("scene_location", ""))
+        if hasattr(self, "time_constraint_var"):
+            self.time_constraint_var.set(other_params.get("time_constraint", ""))
         try:
-            self.draft_variants_var.set(str(other_params.get("draft_variants", 3)))
+            if hasattr(self, "draft_variants_var"):
+                self.draft_variants_var.set(str(other_params.get("draft_variants", 3)))
         except Exception:
-            self.draft_variants_var.set("3")
+            if hasattr(self, "draft_variants_var"):
+                self.draft_variants_var.set("3")
         self.log("已加载配置。")
     else:
         messagebox.showwarning("提示", "未找到或无法读取配置文件。")
@@ -1343,20 +1396,38 @@ def save_config_btn(self):
         "interface_format": current_embedding_interface,
     }
     other_params = {
-        "topic": self.topic_text.get("0.0", "end").strip(),
-        "genre": self.genre_var.get(),
-        "num_chapters": self.safe_get_int(self.num_chapters_var, 1),
-        "word_number": self.safe_get_int(self.word_number_var, 10000),
-        "filepath": self.filepath_var.get(),
-        "chapter_num": self.chapter_num_var.get(),
-        "user_guidance": self.user_guide_text.get("0.0", "end").strip(),
-        "characters_involved": self.characters_involved_var.get(),
-        "key_items": self.key_items_var.get(),
-        "scene_location": self.scene_location_var.get(),
-        "time_constraint": self.time_constraint_var.get(),
+        "topic": self.topic_text.get("0.0", "end").strip()
+        if hasattr(self, "topic_text")
+        else "",
+        "genre": self.genre_var.get() if hasattr(self, "genre_var") else "",
+        "num_chapters": self.safe_get_int(self.num_chapters_var, 1)
+        if hasattr(self, "num_chapters_var")
+        else 1,
+        "word_number": self.safe_get_int(self.word_number_var, 10000)
+        if hasattr(self, "word_number_var")
+        else 10000,
+        "filepath": self.filepath_var.get() if hasattr(self, "filepath_var") else "",
+        "chapter_num": self.chapter_num_var.get()
+        if hasattr(self, "chapter_num_var")
+        else "1",
+        "user_guidance": self.user_guide_text.get("0.0", "end").strip()
+        if hasattr(self, "user_guide_text")
+        else "",
+        "characters_involved": self.characters_involved_var.get()
+        if hasattr(self, "characters_involved_var")
+        else "",
+        "key_items": self.key_items_var.get() if hasattr(self, "key_items_var") else "",
+        "scene_location": self.scene_location_var.get()
+        if hasattr(self, "scene_location_var")
+        else "",
+        "time_constraint": self.time_constraint_var.get()
+        if hasattr(self, "time_constraint_var")
+        else "",
     }
     llm_config_name = (
-        self.base_url_var.get().split("/")[2] + " " + self.model_name_var.get()
+        (self.base_url_var.get().split("/")[2] + " " + self.model_name_var.get())
+        if (self.base_url_var.get() and self.model_name_var.get())
+        else "默认配置"
     )
 
     existing_config = load_config(self.config_file)

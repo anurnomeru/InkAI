@@ -14,6 +14,14 @@ logging.basicConfig(
 import customtkinter as ctk
 from ui import NovelGeneratorGUI
 
+# Initialize global theme/appearance
+try:
+    from ui.theme import init_appearance
+
+    init_appearance(mode="system", theme="blue")
+except Exception:
+    pass
+
 # --- Runtime patch: guard customtkinter CTkTextbox scrollbar checker from calling
 # widget methods after destruction (prevents tight exception loops / UI freeze)
 try:
