@@ -438,20 +438,36 @@ def build_novel_params_area(self, start_row=1):
 
 
 def build_optional_buttons_area(self, start_row=2):
-    # 让按钮行在底部：先让 start_row 这一行做“占位填充”，按钮放在下一行
-    try:
-        self.right_frame.grid_rowconfigure(start_row, weight=1)
-    except Exception:
-        pass
+    parent = getattr(self, "params_frame", None)
+    if parent is not None:
+        try:
+            self.right_frame.grid_rowconfigure(start_row, weight=0)
+        except Exception:
+            pass
+        target_row = len(parent.grid_slaves(column=0))
+        self.optional_btn_frame = ctk.CTkFrame(parent)
+        self.optional_btn_frame.grid(
+            row=target_row,
+            column=0,
+            sticky="ew",
+            padx=0,
+            pady=(0, SPACING["sm"]),
+        )
+    else:
+        # 兜底：若参数滚动区尚未创建，则保持原有右侧底部布局
+        try:
+            self.right_frame.grid_rowconfigure(start_row, weight=1)
+        except Exception:
+            pass
 
-    self.optional_btn_frame = ctk.CTkFrame(self.right_frame)
-    self.optional_btn_frame.grid(
-        row=start_row + 1,
-        column=0,
-        sticky="sew",
-        padx=SPACING["sm"],
-        pady=SPACING["sm"],
-    )  # 底部对齐
+        self.optional_btn_frame = ctk.CTkFrame(self.right_frame)
+        self.optional_btn_frame.grid(
+            row=start_row + 1,
+            column=0,
+            sticky="sew",
+            padx=SPACING["sm"],
+            pady=SPACING["sm"],
+        )
     self.optional_btn_frame.columnconfigure((0, 1, 2, 3, 4, 5, 6, 7), weight=1)
 
     def wrap_progress(label_text, fn):
