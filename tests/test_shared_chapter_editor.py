@@ -52,13 +52,16 @@ class FakeTextbox:
         self.kwargs = kwargs
         self.grid_calls = []
         self.bound_events = []
+        self.bound_callbacks = {}
         self.content = ""
+        self.selection = ""
 
     def grid(self, **kwargs):
         self.grid_calls.append(kwargs)
 
     def bind(self, event_name, callback):
         self.bound_events.append(event_name)
+        self.bound_callbacks[event_name] = callback
 
     def delete(self, start, end):
         self.content = ""
@@ -67,6 +70,10 @@ class FakeTextbox:
         self.content = value
 
     def get(self, start, end):
+        if start == shared_editor.tk.SEL_FIRST and end == shared_editor.tk.SEL_LAST:
+            if not self.selection:
+                raise shared_editor.tk.TclError("no selection")
+            return self.selection
         return self.content
 
     def see(self, index):
@@ -74,6 +81,13 @@ class FakeTextbox:
 
     def configure(self, **kwargs):
         self.kwargs.update(kwargs)
+
+    def index(self, index_name):
+        if index_name == shared_editor.tk.SEL_FIRST and self.selection in self.content:
+            return self.content.index(self.selection)
+        if index_name == shared_editor.tk.SEL_LAST and self.selection in self.content:
+            return self.content.index(self.selection) + len(self.selection)
+        return 0
 
 
 def test_shared_editor_builder_installs_main_editor_bindings(monkeypatch):
@@ -101,8 +115,33 @@ def test_shared_editor_builder_installs_main_editor_bindings(monkeypatch):
     assert widget is fake_self.chapter_result
     assert widget.kwargs["font"] == (shared_editor.FONT_FAMILY, shared_editor.FONT_SIZES["lg"])
     assert "<Control-s>" in widget.bound_events
+    assert "<FocusOut>" in widget.bound_events
     assert installed and installed[0][0] is widget
     assert context_menus == [widget]
+
+
+def test_shared_editor_builder_tracks_last_selection_for_polish(monkeypatch):
+    monkeypatch.setattr(shared_editor.ctk, "CTkTextbox", FakeTextbox)
+    monkeypatch.setattr(shared_editor, "install_text_shortcuts", lambda widget, **kwargs: None)
+    monkeypatch.setattr(shared_editor, "TextWidgetContextMenu", lambda widget: None)
+
+    fake_self = SimpleNamespace()
+    widget = shared_editor.build_chapter_editor(
+        fake_self,
+        parent=FakeFrame(),
+        attribute_name="chapter_result",
+        label_widget=FakeLabel(),
+        label_template="本章内容（可编辑） 字数：{count}",
+        save_handler=lambda: None,
+    )
+    widget.content = "前文原句后文"
+    widget.selection = "原句"
+
+    widget.bound_callbacks["<ButtonRelease>"]()
+    widget.selection = ""
+    widget.bound_callbacks["<FocusOut>"]()
+
+    assert shared_editor.get_cached_selection_text(widget) == "原句"
 
 
 def test_chapters_tab_uses_shared_editor_builder(monkeypatch):

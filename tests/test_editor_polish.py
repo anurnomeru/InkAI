@@ -38,6 +38,9 @@ class FakeTextWidget:
         if self.selection and self.selection in self.content:
             self.last_insert_index = self.content.index(self.selection)
             self.content = self.content.replace(self.selection, "", 1)
+        elif isinstance(start, int) and isinstance(end, int):
+            self.last_insert_index = start
+            self.content = self.content[:start] + self.content[end:]
 
     def insert(self, index, value):
         if isinstance(index, int):
@@ -145,6 +148,37 @@ def test_polish_selected_text_replaces_selected_content_with_chosen_variant(monk
     assert progress[0] == (0, 6)
     assert progress[-1] == (6, 6)
     assert logs[-1] == "润色完成：已替换选中文本。"
+
+
+def test_polish_selected_text_uses_cached_selection_after_focus_loss(monkeypatch):
+    logs = []
+    fake_self = SimpleNamespace(
+        safe_log=logs.append,
+    )
+    widget = FakeTextWidget(content="前文原句后文", selection="")
+    widget._last_selected_text = "原句"
+    widget._last_selected_start = 2
+    widget._last_selected_end = 4
+
+    monkeypatch.setattr(shared_editor, "load_style_guidance_text", lambda self: "冷峻克制")
+
+    prompts = []
+
+    def fake_invoke(prompt, variant_index=None, total_variants=None):
+        prompts.append(prompt)
+        return f"改写{variant_index}"
+
+    result = shared_editor.polish_selected_text(
+        fake_self,
+        widget,
+        llm_invoke=fake_invoke,
+        choose_variant=lambda variants: variants[0],
+    )
+
+    assert result == "改写1"
+    assert prompts
+    assert "原句" in prompts[0]
+    assert widget.content == "前文改写1后文"
 
 
 def test_build_polish_prompt_includes_optional_user_guidance():

@@ -21,6 +21,35 @@ from ui.toast import show_toast
 STYLE_GUIDANCE_FILENAME = "文风说明.txt"
 
 
+def _read_widget_selection(widget):
+    try:
+        text = widget.get(tk.SEL_FIRST, tk.SEL_LAST)
+        start = widget.index(tk.SEL_FIRST)
+        end = widget.index(tk.SEL_LAST)
+        return (text or "").strip(), start, end
+    except Exception:
+        try:
+            text = widget.selection_get()
+            return (text or "").strip(), None, None
+        except Exception:
+            return "", None, None
+
+
+def cache_widget_selection(widget) -> str:
+    selected_text, start, end = _read_widget_selection(widget)
+    if selected_text:
+        setattr(widget, "_last_selected_text", selected_text)
+        if start is not None:
+            setattr(widget, "_last_selected_start", start)
+        if end is not None:
+            setattr(widget, "_last_selected_end", end)
+    return selected_text
+
+
+def get_cached_selection_text(widget) -> str:
+    return (getattr(widget, "_last_selected_text", "") or "").strip()
+
+
 def load_style_guidance_text(self) -> str:
     try:
         filepath = self.filepath_var.get().strip() if hasattr(self, "filepath_var") else ""
@@ -106,12 +135,18 @@ def parse_polish_variants(response_text: str) -> list[str]:
 
 
 def replace_selected_text(widget, replacement_text: str) -> None:
-    try:
-        start_index = widget.index(tk.SEL_FIRST)
-    except Exception:
-        start_index = tk.SEL_FIRST
-    widget.delete(tk.SEL_FIRST, tk.SEL_LAST)
+    selected_text, current_start, current_end = _read_widget_selection(widget)
+    if selected_text and current_start is not None and current_end is not None:
+        start_index = current_start
+        delete_start = current_start
+        delete_end = current_end
+    else:
+        start_index = getattr(widget, "_last_selected_start", tk.SEL_FIRST)
+        delete_start = getattr(widget, "_last_selected_start", tk.SEL_FIRST)
+        delete_end = getattr(widget, "_last_selected_end", tk.SEL_LAST)
+    widget.delete(delete_start, delete_end)
     widget.insert(start_index, replacement_text)
+    setattr(widget, "_last_selected_text", replacement_text)
 
 
 def _build_polish_dialog(master, variants: list[str], on_choose) -> None:
@@ -288,15 +323,15 @@ def generate_selection_polish_variants(
 
 
 def polish_selected_text(self, widget, llm_invoke, choose_variant, progress_cb=None, stop_requested=None):
-    try:
-        selected_text = widget.get(tk.SEL_FIRST, tk.SEL_LAST).strip()
-    except Exception:
-        try:
-            selected_text = widget.selection_get().strip()
-        except tk.TclError:
-            if hasattr(self, "safe_log"):
-                self.safe_log("润色失败：请先选中一段文本。")
-            return None
+    selected_text, start, end = _read_widget_selection(widget)
+    if selected_text:
+        setattr(widget, "_last_selected_text", selected_text)
+        if start is not None:
+            setattr(widget, "_last_selected_start", start)
+        if end is not None:
+            setattr(widget, "_last_selected_end", end)
+    else:
+        selected_text = get_cached_selection_text(widget)
     if not selected_text:
         if hasattr(self, "safe_log"):
             self.safe_log("润色失败：请先选中一段文本。")
@@ -504,9 +539,11 @@ def build_chapter_editor(
         text = widget.get("0.0", "end")
         count = max(0, len(text) - 1)
         label_widget.configure(text=label_template.format(count=count))
+        cache_widget_selection(widget)
 
     widget.bind("<KeyRelease>", update_word_count)
     widget.bind("<ButtonRelease>", update_word_count)
+    widget.bind("<FocusOut>", lambda event=None: cache_widget_selection(widget))
     widget.bind("<Control-s>", lambda e: save_handler())
 
     setattr(self, attribute_name, widget)
