@@ -52,6 +52,9 @@ class FakeMaster:
 
 
 class FakeDialog:
+    def __init__(self):
+        self.protocol_calls = []
+
     def title(self, *args, **kwargs):
         pass
 
@@ -59,7 +62,7 @@ class FakeDialog:
         pass
 
     def protocol(self, *args, **kwargs):
-        pass
+        self.protocol_calls.append((args, kwargs))
 
     def grab_set(self):
         pass
@@ -105,13 +108,21 @@ class FakeFrame:
 
 
 class FakeDialogButton:
+    auto_confirm = True
+    instances = []
+
     def __init__(self, parent=None, text="", command=None, **kwargs):
         self.text = text
         self.command = command
+        self.configure_calls = []
+        FakeDialogButton.instances.append(self)
 
     def pack(self, **kwargs):
-        if self.text == "确认使用" and self.command:
+        if self.text == "确认使用" and self.command and self.auto_confirm:
             self.command()
+
+    def configure(self, **kwargs):
+        self.configure_calls.append(kwargs)
 
 
 def test_generate_chapter_draft_ui_updates_progress_for_parallel_variants(monkeypatch):
@@ -210,3 +221,82 @@ def test_generate_chapter_draft_ui_updates_progress_for_parallel_variants(monkey
         assert refreshed == ["refresh"]
         assert shown and shown[-1].startswith("草稿-")
         assert fake_self.btn_generate_chapter.text == "Step3. 生成草稿"
+
+
+def test_generate_chapter_prompt_dialog_disables_buttons_after_confirm(monkeypatch):
+    logs = []
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        fake_self = SimpleNamespace(
+            filepath_var=FakeVar(tmpdir),
+            master=FakeMaster(),
+            btn_generate_chapter=FakeButton(),
+            loaded_config={
+                "llm_configs": {
+                    "OpenCode": {
+                        "interface_format": "opencode",
+                        "api_key": "",
+                        "base_url": "",
+                        "model_name": "packy/qwen3.5-flash",
+                        "temperature": 0.7,
+                        "max_tokens": 1024,
+                        "timeout": 30,
+                    }
+                }
+            },
+            prompt_draft_llm_var=FakeVar("OpenCode"),
+            chapter_num_var=FakeVar("1"),
+            word_number_var=FakeVar("1200"),
+            user_guide_text=FakeText(""),
+            characters_involved_var=FakeVar(""),
+            key_items_var=FakeVar(""),
+            scene_location_var=FakeVar(""),
+            time_constraint_var=FakeVar(""),
+            embedding_api_key_var=FakeVar(""),
+            embedding_url_var=FakeVar(""),
+            embedding_interface_format_var=FakeVar(""),
+            embedding_model_name_var=FakeVar(""),
+            embedding_retrieval_k_var=FakeVar("4"),
+            draft_variants_var=FakeVar("1"),
+            char_inv_text=FakeText(""),
+            safe_get_int=lambda var, default=0: int(var.get().strip()) if str(var.get()).strip() else default,
+            safe_log=logs.append,
+            refresh_draft_variants_list=lambda: None,
+            show_chapter_in_textbox=lambda text: None,
+            handle_exception=lambda msg: (_ for _ in ()).throw(AssertionError(msg)),
+        )
+        fake_self.generate_chapter_draft_ui = lambda: generation_handlers.generate_chapter_draft_ui(fake_self)
+
+        class ImmediateThread:
+            def __init__(self, target=None, args=(), daemon=True):
+                self._target = target
+                self._args = args
+
+            def start(self):
+                self._target(*self._args)
+
+            def join(self):
+                return None
+
+        FakeDialogButton.instances = []
+        FakeDialogButton.auto_confirm = True
+        monkeypatch.setattr(generation_handlers.messagebox, "showwarning", lambda *args, **kwargs: None)
+        monkeypatch.setattr(generation_handlers.messagebox, "askyesno", lambda *args, **kwargs: True)
+        monkeypatch.setattr(generation_handlers, "build_chapter_prompt", lambda **kwargs: "测试提示词")
+        monkeypatch.setattr(generation_handlers.threading, "Thread", ImmediateThread)
+        monkeypatch.setattr(generation_handlers.ctk, "CTkToplevel", lambda *args, **kwargs: FakeDialog())
+        monkeypatch.setattr(generation_handlers.ctk, "CTkTextbox", FakeTextbox)
+        monkeypatch.setattr(generation_handlers.ctk, "CTkLabel", FakeLabel)
+        monkeypatch.setattr(generation_handlers.ctk, "CTkFrame", FakeFrame)
+        monkeypatch.setattr(generation_handlers.ctk, "CTkButton", FakeDialogButton)
+        monkeypatch.setattr(
+            "novel_generator.chapter.generate_chapter_draft",
+            lambda **kwargs: "单稿内容",
+        )
+
+        generation_handlers.generate_chapter_draft_ui(fake_self)
+
+        confirm_button = next(btn for btn in FakeDialogButton.instances if btn.text == "确认使用")
+        cancel_button = next(btn for btn in FakeDialogButton.instances if btn.text == "取消请求")
+        assert {"state": "disabled"} in confirm_button.configure_calls
+        assert {"state": "disabled"} in cancel_button.configure_calls

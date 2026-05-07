@@ -289,19 +289,39 @@ def generate_chapter_draft_ui(self):
 
                 button_frame = ctk.CTkFrame(dialog)
                 button_frame.pack(pady=10)
+                action_state = {"done": False}
+                buttons = []
+
+                def _disable_actions():
+                    for btn in buttons:
+                        try:
+                            btn.configure(state="disabled")
+                        except Exception:
+                            pass
+
                 def on_confirm():
+                    if action_state["done"]:
+                        return
+                    action_state["done"] = True
+                    _disable_actions()
                     result["prompt"] = text_box.get("1.0", "end").strip()
                     self.safe_log("提示词已确认，开始生成...")
                     dialog.destroy()
                     event.set()
                 def on_cancel():
+                    if action_state["done"]:
+                        return
+                    action_state["done"] = True
+                    _disable_actions()
                     result["prompt"] = None
                     self.safe_log("用户取消了提示词对话框。")
                     dialog.destroy()
                     event.set()
                 btn_confirm = ctk.CTkButton(button_frame, text="确认使用", font=("Microsoft YaHei", 12), command=on_confirm)
-                btn_confirm.pack(side="left", padx=10)
                 btn_cancel = ctk.CTkButton(button_frame, text="取消请求", font=("Microsoft YaHei", 12), command=on_cancel)
+                buttons.append(btn_confirm)
+                buttons.append(btn_cancel)
+                btn_confirm.pack(side="left", padx=10)
                 btn_cancel.pack(side="left", padx=10)
                 # 若用户直接关闭弹窗，则调用 on_cancel 处理
                 dialog.protocol("WM_DELETE_WINDOW", on_cancel)

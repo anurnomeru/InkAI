@@ -120,6 +120,20 @@ def test_polish_selected_text_replaces_selected_content_with_chosen_variant(monk
     logs = []
     fake_self = SimpleNamespace(
         safe_log=logs.append,
+        prompt_draft_llm_var=SimpleNamespace(get=lambda: "OpenCode"),
+        loaded_config={
+            "llm_configs": {
+                "OpenCode": {
+                    "interface_format": "opencode",
+                    "api_key": "",
+                    "base_url": "",
+                    "model_name": "packy/qwen3.5-flash",
+                    "temperature": 0.7,
+                    "max_tokens": 1024,
+                    "timeout": 30,
+                }
+            }
+        },
     )
     widget = FakeTextWidget(content="前文原句后文", selection="原句")
 
@@ -154,6 +168,20 @@ def test_polish_selected_text_uses_cached_selection_after_focus_loss(monkeypatch
     logs = []
     fake_self = SimpleNamespace(
         safe_log=logs.append,
+        prompt_draft_llm_var=SimpleNamespace(get=lambda: "OpenCode"),
+        loaded_config={
+            "llm_configs": {
+                "OpenCode": {
+                    "interface_format": "opencode",
+                    "api_key": "",
+                    "base_url": "",
+                    "model_name": "packy/qwen3.5-flash",
+                    "temperature": 0.7,
+                    "max_tokens": 1024,
+                    "timeout": 30,
+                }
+            }
+        },
     )
     widget = FakeTextWidget(content="前文原句后文", selection="")
     widget._last_selected_text = "原句"
@@ -261,3 +289,123 @@ def test_polish_selected_text_returns_none_when_prompt_dialog_cancelled(monkeypa
 
     assert result is None
     assert logs[-1] == "润色已取消：未发送生成请求。"
+
+
+def test_prompt_editor_dialog_disables_buttons_after_confirm(monkeypatch):
+    created_buttons = []
+
+    class FakeDialog:
+        def title(self, *args, **kwargs):
+            pass
+
+        def geometry(self, *args, **kwargs):
+            pass
+
+        def protocol(self, *args, **kwargs):
+            pass
+
+        def grab_set(self):
+            pass
+
+    class FakeTextbox:
+        def __init__(self, *args, **kwargs):
+            self.value = ""
+
+        def pack(self, **kwargs):
+            pass
+
+        def insert(self, start, value):
+            self.value = value
+
+        def get(self, start, end):
+            return self.value
+
+        def bind(self, *args, **kwargs):
+            pass
+
+    class FakeLabel:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def pack(self, **kwargs):
+            pass
+
+        def configure(self, **kwargs):
+            pass
+
+    class FakeFrame:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def pack(self, **kwargs):
+            pass
+
+    class FakeButton:
+        def __init__(self, parent=None, text="", command=None, **kwargs):
+            self.text = text
+            self.command = command
+            self.configure_calls = []
+            created_buttons.append(self)
+
+        def pack(self, **kwargs):
+            pass
+
+        def configure(self, **kwargs):
+            self.configure_calls.append(kwargs)
+
+    monkeypatch.setattr(shared_editor.ctk, "CTkToplevel", lambda *args, **kwargs: FakeDialog())
+    monkeypatch.setattr(shared_editor.ctk, "CTkTextbox", FakeTextbox)
+    monkeypatch.setattr(shared_editor.ctk, "CTkLabel", FakeLabel)
+    monkeypatch.setattr(shared_editor.ctk, "CTkFrame", FakeFrame)
+    monkeypatch.setattr(shared_editor, "make_button", lambda parent, **kwargs: FakeButton(parent, **kwargs))
+
+    results = []
+    shared_editor._build_prompt_editor_dialog(
+        master=object(),
+        initial_prompt="测试提示词",
+        on_done=lambda value, dialog: results.append(value),
+    )
+
+    confirm_button = next(btn for btn in created_buttons if btn.text == "确认生成")
+    cancel_button = next(btn for btn in created_buttons if btn.text == "取消请求")
+    confirm_button.command()
+
+    assert results == ["测试提示词"]
+    assert {"state": "disabled"} in confirm_button.configure_calls
+    assert {"state": "disabled"} in cancel_button.configure_calls
+
+
+def test_build_selection_polish_request_uses_cached_selection_and_main_thread_state(monkeypatch):
+    logs = []
+    widget = FakeTextWidget(content="前文原句后文", selection="")
+    widget._last_selected_text = "原句"
+
+    fake_self = SimpleNamespace(
+        safe_log=logs.append,
+        prompt_draft_llm_var=SimpleNamespace(get=lambda: "OpenCode"),
+        loaded_config={
+            "llm_configs": {
+                "OpenCode": {
+                    "interface_format": "opencode",
+                    "api_key": "",
+                    "base_url": "",
+                    "model_name": "packy/qwen3.5-flash",
+                    "temperature": 0.7,
+                    "max_tokens": 1024,
+                    "timeout": 30,
+                }
+            }
+        },
+    )
+
+    monkeypatch.setattr(shared_editor, "load_style_guidance_text", lambda self: "冷峻克制")
+    monkeypatch.setattr(shared_editor, "open_selection_polish_prompt_dialog", lambda self, prompt: prompt + "\n补充一句")
+
+    request = shared_editor.build_selection_polish_request(fake_self, widget)
+
+    assert request is not None
+    assert request["selected_text"] == "原句"
+    assert request["llm_name"] == "OpenCode"
+    assert request["llm_config"]["model_name"] == "packy/qwen3.5-flash"
+    assert "冷峻克制" in request["edited_prompt"]
+    assert "原句" in request["edited_prompt"]

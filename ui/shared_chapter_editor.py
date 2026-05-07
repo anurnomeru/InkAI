@@ -231,27 +231,48 @@ def _build_prompt_editor_dialog(master, initial_prompt: str, on_done) -> None:
 
     button_frame = ctk.CTkFrame(dialog)
     button_frame.pack(pady=10)
+    action_state = {"done": False}
+    buttons = []
+
+    def _disable_actions():
+        for btn in buttons:
+            try:
+                btn.configure(state="disabled")
+            except Exception:
+                pass
 
     def on_confirm():
+        if action_state["done"]:
+            return
+        action_state["done"] = True
+        _disable_actions()
         on_done(text_box.get("1.0", "end").strip(), dialog)
 
     def on_cancel():
+        if action_state["done"]:
+            return
+        action_state["done"] = True
+        _disable_actions()
         on_done(None, dialog)
 
-    make_button(
+    confirm_button = make_button(
         button_frame,
         text="确认生成",
         command=on_confirm,
         kind="primary",
         font=(FONT_FAMILY, FONT_SIZES["md"]),
-    ).pack(side="left", padx=10)
-    make_button(
+    )
+    cancel_button = make_button(
         button_frame,
         text="取消请求",
         command=on_cancel,
         kind="secondary",
         font=(FONT_FAMILY, FONT_SIZES["md"]),
-    ).pack(side="left", padx=10)
+    )
+    buttons.append(confirm_button)
+    buttons.append(cancel_button)
+    confirm_button.pack(side="left", padx=10)
+    cancel_button.pack(side="left", padx=10)
 
     dialog.protocol("WM_DELETE_WINDOW", on_cancel)
     dialog.grab_set()
@@ -278,6 +299,43 @@ def open_selection_polish_prompt_dialog(self, initial_prompt: str):
     )
     event.wait()
     return result["prompt"]
+
+
+def build_selection_polish_request(self, widget):
+    selected_text, start, end = _read_widget_selection(widget)
+    if selected_text:
+        setattr(widget, "_last_selected_text", selected_text)
+        if start is not None:
+            setattr(widget, "_last_selected_start", start)
+        if end is not None:
+            setattr(widget, "_last_selected_end", end)
+    else:
+        selected_text = get_cached_selection_text(widget)
+    if not selected_text:
+        if hasattr(self, "safe_log"):
+            self.safe_log("润色失败：请先选中一段文本。")
+        return None
+
+    style_guidance = load_style_guidance_text(self)
+    prompt = build_selection_polish_prompt(
+        style_guidance=style_guidance,
+        selected_text=selected_text,
+        user_extra_guidance="",
+    )
+    edited_prompt = open_selection_polish_prompt_dialog(self, prompt)
+    if not edited_prompt:
+        if hasattr(self, "safe_log"):
+            self.safe_log("润色已取消：未发送生成请求。")
+        return None
+
+    chosen_name = self.prompt_draft_llm_var.get()
+    llm_config = dict(self.loaded_config["llm_configs"][chosen_name])
+    return {
+        "selected_text": selected_text,
+        "edited_prompt": edited_prompt,
+        "llm_name": chosen_name,
+        "llm_config": llm_config,
+    }
 
 
 def generate_selection_polish_variants(
@@ -323,37 +381,15 @@ def generate_selection_polish_variants(
 
 
 def polish_selected_text(self, widget, llm_invoke, choose_variant, progress_cb=None, stop_requested=None):
-    selected_text, start, end = _read_widget_selection(widget)
-    if selected_text:
-        setattr(widget, "_last_selected_text", selected_text)
-        if start is not None:
-            setattr(widget, "_last_selected_start", start)
-        if end is not None:
-            setattr(widget, "_last_selected_end", end)
-    else:
-        selected_text = get_cached_selection_text(widget)
-    if not selected_text:
-        if hasattr(self, "safe_log"):
-            self.safe_log("润色失败：请先选中一段文本。")
-        return None
-
-    style_guidance = load_style_guidance_text(self)
-    prompt = build_selection_polish_prompt(
-        style_guidance=style_guidance,
-        selected_text=selected_text,
-        user_extra_guidance="",
-    )
-    edited_prompt = open_selection_polish_prompt_dialog(self, prompt)
-    if not edited_prompt:
-        if hasattr(self, "safe_log"):
-            self.safe_log("润色已取消：未发送生成请求。")
+    request = build_selection_polish_request(self, widget)
+    if not request:
         return None
 
     if hasattr(self, "safe_log"):
         self.safe_log("润色请求已确认，开始并发生成 6 个版本...")
 
     variants = generate_selection_polish_variants(
-        base_prompt=edited_prompt,
+        base_prompt=request["edited_prompt"],
         llm_invoke=llm_invoke,
         variant_count=6,
         progress_cb=progress_cb,
@@ -378,9 +414,7 @@ def polish_selected_text(self, widget, llm_invoke, choose_variant, progress_cb=N
     return chosen
 
 
-def _build_selection_polish_llm_invoke(self):
-    chosen_name = self.prompt_draft_llm_var.get()
-    llm_config = self.loaded_config["llm_configs"][chosen_name]
+def _build_selection_polish_llm_invoke(llm_name: str, llm_config: dict, log_cb=None):
     adapter = create_llm_adapter(
         interface_format=llm_config["interface_format"],
         api_key=llm_config["api_key"],
@@ -390,9 +424,9 @@ def _build_selection_polish_llm_invoke(self):
         max_tokens=llm_config["max_tokens"],
         timeout=llm_config["timeout"],
     )
-    if hasattr(self, "safe_log"):
-        self.safe_log(
-            f"润色选中文本：使用模型 {chosen_name}/{llm_config['model_name']}，将并发生成 6 个版本..."
+    if log_cb is not None:
+        log_cb(
+            f"润色选中文本：使用模型 {llm_name}/{llm_config['model_name']}，将并发生成 6 个版本..."
         )
     return lambda prompt, variant_index=None, total_variants=None: invoke_with_cleaning(adapter, prompt)
 
@@ -413,6 +447,10 @@ def trigger_selection_polish(self, widget, controller=None):
 
     if controller and controller.running:
         return
+    if widget is None:
+        if hasattr(self, "safe_log"):
+            self.safe_log("润色失败：未找到可用编辑器。")
+        return
 
     def _confirm_stop():
         return tk.messagebox.askyesno("二次确认", "确定要停止当前润色任务吗？")
@@ -426,6 +464,12 @@ def trigger_selection_polish(self, widget, controller=None):
         controller.confirm_stop = _confirm_stop
         controller.on_request_stop = _request_stop
         controller.start()
+
+    request = build_selection_polish_request(self, widget)
+    if not request:
+        if controller is not None:
+            controller.finish()
+        return
 
     def task():
         try:
@@ -443,12 +487,18 @@ def trigger_selection_polish(self, widget, controller=None):
                 event.wait()
                 return result["choice"]
 
-            llm_invoke = _build_selection_polish_llm_invoke(self)
-            replaced = polish_selected_text(
-                self,
-                widget,
-                llm_invoke,
-                choose_variant,
+            llm_invoke = _build_selection_polish_llm_invoke(
+                request["llm_name"],
+                request["llm_config"],
+                log_cb=getattr(self, "safe_log", None),
+            )
+            if hasattr(self, "safe_log"):
+                self.safe_log("润色请求已确认，开始并发生成 6 个版本...")
+
+            variants = generate_selection_polish_variants(
+                base_prompt=request["edited_prompt"],
+                llm_invoke=llm_invoke,
+                variant_count=6,
                 progress_cb=(
                     (lambda done, total: self.master.after(
                         0,
@@ -458,7 +508,23 @@ def trigger_selection_polish(self, widget, controller=None):
                     else None
                 ),
                 stop_requested=lambda: stop_state["requested"],
+                log_cb=getattr(self, "safe_log", None),
             )
+            if len(variants) < 1:
+                if hasattr(self, "safe_log"):
+                    self.safe_log("润色失败：未生成可用版本。")
+                return
+
+            chosen = choose_variant(variants)
+            if not chosen:
+                if hasattr(self, "safe_log"):
+                    self.safe_log("润色已取消：未替换原文。")
+                return
+
+            replace_selected_text(widget, chosen)
+            if hasattr(self, "safe_log"):
+                self.safe_log("润色完成：已替换选中文本。")
+            replaced = chosen
             if replaced:
                 try:
                     show_toast(widget, "已替换为润色版本", kind="success", duration_ms=1400)
