@@ -409,3 +409,25 @@ def test_build_selection_polish_request_uses_cached_selection_and_main_thread_st
     assert request["llm_config"]["model_name"] == "packy/qwen3.5-flash"
     assert "冷峻克制" in request["edited_prompt"]
     assert "原句" in request["edited_prompt"]
+
+
+def test_open_selection_polish_prompt_dialog_uses_wait_window_on_main_thread(monkeypatch):
+    waited = []
+
+    class FakeDialog:
+        def wait_window(self):
+            waited.append("wait_window")
+
+    fake_master = SimpleNamespace()
+    fake_self = SimpleNamespace(master=fake_master)
+
+    monkeypatch.setattr(
+        shared_editor,
+        "_build_prompt_editor_dialog",
+        lambda master, initial_prompt, on_done: (on_done("已确认", FakeDialog()), FakeDialog())[1],
+    )
+
+    result = shared_editor.open_selection_polish_prompt_dialog(fake_self, "测试")
+
+    assert result == "已确认"
+    assert waited == ["wait_window"]

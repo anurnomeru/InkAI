@@ -35,14 +35,22 @@ def _read_widget_selection(widget):
             return "", None, None
 
 
+def _normalize_text_index(value):
+    if isinstance(value, str):
+        return value
+    if isinstance(value, int):
+        return f"1.{value}"
+    return value
+
+
 def cache_widget_selection(widget) -> str:
     selected_text, start, end = _read_widget_selection(widget)
     if selected_text:
         setattr(widget, "_last_selected_text", selected_text)
         if start is not None:
-            setattr(widget, "_last_selected_start", start)
+            setattr(widget, "_last_selected_start", _normalize_text_index(start))
         if end is not None:
-            setattr(widget, "_last_selected_end", end)
+            setattr(widget, "_last_selected_end", _normalize_text_index(end))
     return selected_text
 
 
@@ -137,13 +145,13 @@ def parse_polish_variants(response_text: str) -> list[str]:
 def replace_selected_text(widget, replacement_text: str) -> None:
     selected_text, current_start, current_end = _read_widget_selection(widget)
     if selected_text and current_start is not None and current_end is not None:
-        start_index = current_start
-        delete_start = current_start
-        delete_end = current_end
+        start_index = _normalize_text_index(current_start)
+        delete_start = _normalize_text_index(current_start)
+        delete_end = _normalize_text_index(current_end)
     else:
-        start_index = getattr(widget, "_last_selected_start", tk.SEL_FIRST)
-        delete_start = getattr(widget, "_last_selected_start", tk.SEL_FIRST)
-        delete_end = getattr(widget, "_last_selected_end", tk.SEL_LAST)
+        start_index = _normalize_text_index(getattr(widget, "_last_selected_start", tk.SEL_FIRST))
+        delete_start = _normalize_text_index(getattr(widget, "_last_selected_start", tk.SEL_FIRST))
+        delete_end = _normalize_text_index(getattr(widget, "_last_selected_end", tk.SEL_LAST))
     widget.delete(delete_start, delete_end)
     widget.insert(start_index, replacement_text)
     setattr(widget, "_last_selected_text", replacement_text)
@@ -201,7 +209,7 @@ def _build_polish_dialog(master, variants: list[str], on_choose) -> None:
     dialog.grab_set()
 
 
-def _build_prompt_editor_dialog(master, initial_prompt: str, on_done) -> None:
+def _build_prompt_editor_dialog(master, initial_prompt: str, on_done):
     dialog = ctk.CTkToplevel(master)
     dialog.title("润色请求提示词（可编辑）")
     dialog.geometry("760x560")
@@ -276,6 +284,7 @@ def _build_prompt_editor_dialog(master, initial_prompt: str, on_done) -> None:
 
     dialog.protocol("WM_DELETE_WINDOW", on_cancel)
     dialog.grab_set()
+    return dialog
 
 
 def open_selection_polish_prompt_dialog(self, initial_prompt: str):
@@ -293,11 +302,18 @@ def open_selection_polish_prompt_dialog(self, initial_prompt: str):
         result["prompt"] = prompt_text
         event.set()
 
-    self.master.after(
-        0,
-        lambda: _build_prompt_editor_dialog(self.master, initial_prompt, _done),
-    )
-    event.wait()
+    if threading.current_thread() is threading.main_thread():
+        dialog = _build_prompt_editor_dialog(self.master, initial_prompt, _done)
+        try:
+            dialog.wait_window()
+        except Exception:
+            pass
+    else:
+        self.master.after(
+            0,
+            lambda: _build_prompt_editor_dialog(self.master, initial_prompt, _done),
+        )
+        event.wait()
     return result["prompt"]
 
 
@@ -306,9 +322,9 @@ def build_selection_polish_request(self, widget):
     if selected_text:
         setattr(widget, "_last_selected_text", selected_text)
         if start is not None:
-            setattr(widget, "_last_selected_start", start)
+            setattr(widget, "_last_selected_start", _normalize_text_index(start))
         if end is not None:
-            setattr(widget, "_last_selected_end", end)
+            setattr(widget, "_last_selected_end", _normalize_text_index(end))
     else:
         selected_text = get_cached_selection_text(widget)
     if not selected_text:
