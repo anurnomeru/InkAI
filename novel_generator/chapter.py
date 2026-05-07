@@ -30,6 +30,18 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
+STYLE_GUIDANCE_FILENAME = "文风说明.txt"
+
+
+def prepend_style_guidance(prompt_text: str, style_guidance: str) -> str:
+    """将文风说明前置到提示词最前面。"""
+    normalized_style_guidance = (style_guidance or "").strip()
+    if not normalized_style_guidance:
+        return prompt_text
+
+    logging.info("Applying style guidance to chapter prompt.")
+    return f"【文风说明】\n{normalized_style_guidance}\n\n{prompt_text}"
+
 def _extract_tail_excerpt(text: str, min_paragraphs: int = 3, min_chars: int = 200) -> str:
     """Return the ending excerpt of 	ext using paragraph boundaries (split by newline).
     At least min_paragraphs paragraphs; if not reaching min_chars, keep adding paragraphs from the end.
@@ -336,6 +348,8 @@ def build_chapter_prompt(
     global_summary_text = read_file(global_summary_file)
     character_state_file = os.path.join(filepath, "character_state.txt")
     character_state_text = read_file(character_state_file)
+    style_guidance_file = os.path.join(filepath, STYLE_GUIDANCE_FILENAME)
+    style_guidance_text = read_file(style_guidance_file)
     
     # 获取章节信息
     chapter_info = get_chapter_info_from_blueprint(blueprint_text, novel_number)
@@ -364,7 +378,7 @@ def build_chapter_prompt(
 
     # 第一章特殊处理
     if novel_number == 1:
-        return first_chapter_draft_prompt.format(
+        prompt_text = first_chapter_draft_prompt.format(
             novel_number=novel_number,
             word_number=word_number,
             chapter_title=chapter_title,
@@ -381,6 +395,7 @@ def build_chapter_prompt(
             user_guidance=user_guidance,
             novel_setting=novel_architecture_text
         )
+        return prepend_style_guidance(prompt_text, style_guidance_text)
 
     # 获取前文内容和摘要
     recent_texts = get_last_n_chapters_text(chapters_dir, novel_number, n=3)
@@ -519,7 +534,7 @@ def build_chapter_prompt(
         filtered_context = "（知识库处理失败）"
 
     # 返回最终提示词
-    return next_chapter_draft_prompt.format(
+    prompt_text = next_chapter_draft_prompt.format(
         user_guidance=user_guidance if user_guidance else "无特殊指导",
         global_summary=global_summary_text,
         previous_chapter_excerpt=previous_excerpt,
@@ -548,6 +563,7 @@ def build_chapter_prompt(
         next_chapter_summary=next_chapter_summary,
         filtered_context=filtered_context
     )
+    return prepend_style_guidance(prompt_text, style_guidance_text)
 
 def generate_chapter_draft(
     api_key: str,
@@ -627,7 +643,6 @@ def generate_chapter_draft(
     save_string_to_txt(chapter_content, chapter_file)
     logging.info(f"[Draft] Chapter {novel_number} generated as a draft.")
     return chapter_content
-
 
 
 

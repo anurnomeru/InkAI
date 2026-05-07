@@ -14,6 +14,7 @@ from ui.theme import FONT_FAMILY, FONT_SIZES, SPACING, PRIMARY_COLOR, make_butto
 from ui.toast import show_toast
 from ui.progress import show_progress, hide_progress
 from config_manager import save_config
+from ui.shared_chapter_editor import build_chapter_editor, create_selection_polish_button
 
 
 def _apply_split_ratio(self, r: float) -> None:
@@ -163,6 +164,12 @@ def build_left_layout(self):
         font=(FONT_FAMILY, FONT_SIZES["md"]),
     ).grid(row=0, column=2, padx=SPACING["sm"], sticky="e")
 
+    create_selection_polish_button(
+        self,
+        header_frame,
+        widget_getter=lambda: self.chapter_result,
+    ).grid(row=0, column=3, padx=SPACING["sm"], sticky="e")
+
     try:
         self.finalized_hint_label
     except Exception:
@@ -174,35 +181,31 @@ def build_left_layout(self):
             text_color="green",
             font=(FONT_FAMILY, FONT_SIZES["md"]),
         )
-    self.finalized_hint_label.grid(row=0, column=3, padx=(SPACING["sm"], 0), sticky="e")
+    self.finalized_hint_label.grid(row=0, column=4, padx=(SPACING["sm"], 0), sticky="e")
 
     # 编辑区
-    self.chapter_result = ctk.CTkTextbox(
-        self.left_frame, wrap="word", font=(FONT_FAMILY, FONT_SIZES["lg"])
-    )
-    install_text_shortcuts(self.chapter_result)
-    TextWidgetContextMenu(self.chapter_result)
-    self.chapter_result.grid(
-        row=1, column=0, sticky="nsew", padx=SPACING["sm"], pady=(0, SPACING["sm"])
+    build_chapter_editor(
+        self,
+        parent=self.left_frame,
+        attribute_name="chapter_result",
+        label_widget=self.chapter_label,
+        label_template=t("本章内容（可编辑） 字数：{count}"),
+        save_handler=self.save_main_editor_content,
+        grid_row=1,
+        grid_column=0,
+        columnspan=1,
+        padx=SPACING["sm"],
+        pady=(0, SPACING["sm"]),
     )
 
-    def update_word_count(event=None):
-        text = self.chapter_result.get("0.0", "end")
-        count = len(text) - 1
-        self.chapter_label.configure(
-            text=t("本章内容（可编辑） 字数：{count}").format(count=count)
-        )
-
-    self.chapter_result.bind("<KeyRelease>", update_word_count)
-    self.chapter_result.bind("<ButtonRelease>", update_word_count)
-    self.chapter_result.bind("<Control-s>", lambda e: self.save_main_editor_content())
+    self.chapter_label.configure(text=t("本章内容（可编辑） 字数：0"))
 
     # Step按钮（使用进度框包装长耗时）
     step = ctk.CTkFrame(self.left_frame)
     step.grid(row=2, column=0, sticky="ew", padx=SPACING["sm"], pady=SPACING["sm"])
     step.columnconfigure((0, 1, 2, 3, 4), weight=1)
 
-    make_button(
+    self.btn_generate_architecture = make_button(
         step,
         text=t("Step1. 生成架构"),
         command=_with_progress(
@@ -210,8 +213,9 @@ def build_left_layout(self):
         ),
         kind="primary",
         font=(FONT_FAMILY, FONT_SIZES["md"]),
-    ).grid(row=0, column=0, padx=5, pady=2, sticky="ew")
-    make_button(
+    )
+    self.btn_generate_architecture.grid(row=0, column=0, padx=5, pady=2, sticky="ew")
+    self.btn_generate_directory = make_button(
         step,
         text=t("Step2. 生成目录"),
         command=_with_progress(
@@ -219,28 +223,32 @@ def build_left_layout(self):
         ),
         kind="primary",
         font=(FONT_FAMILY, FONT_SIZES["md"]),
-    ).grid(row=0, column=1, padx=5, pady=2, sticky="ew")
-    make_button(
+    )
+    self.btn_generate_directory.grid(row=0, column=1, padx=5, pady=2, sticky="ew")
+    self.btn_generate_chapter = make_button(
         step,
         text=t("Step3. 生成草稿"),
-        command=_with_progress(self, self.generate_chapter_draft_ui, t("生成草稿中…")),
+        command=self.generate_chapter_draft_ui,
         kind="primary",
         font=(FONT_FAMILY, FONT_SIZES["md"]),
-    ).grid(row=0, column=2, padx=5, pady=2, sticky="ew")
-    make_button(
+    )
+    self.btn_generate_chapter.grid(row=0, column=2, padx=5, pady=2, sticky="ew")
+    self.btn_finalize_chapter = make_button(
         step,
         text=t("Step4. 定稿章节"),
         command=_with_progress(self, self.finalize_chapter_ui, t("定稿中…")),
         kind="primary",
         font=(FONT_FAMILY, FONT_SIZES["md"]),
-    ).grid(row=0, column=3, padx=5, pady=2, sticky="ew")
-    make_button(
+    )
+    self.btn_finalize_chapter.grid(row=0, column=3, padx=5, pady=2, sticky="ew")
+    self.btn_generate_batch = make_button(
         step,
         text=t("批量生成"),
         command=_with_progress(self, self.generate_batch_ui, t("批量生成中…")),
         kind="secondary",
         font=(FONT_FAMILY, FONT_SIZES["md"]),
-    ).grid(row=0, column=4, padx=5, pady=2, sticky="ew")
+    )
+    self.btn_generate_batch.grid(row=0, column=4, padx=5, pady=2, sticky="ew")
 
     # 草稿变体（选择）
     dv = ctk.CTkFrame(self.left_frame)

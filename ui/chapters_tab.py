@@ -9,12 +9,11 @@ import customtkinter as ctk
 
 from tkinter import messagebox
 
-from ui.context_menu import TextWidgetContextMenu
 from ui.i18n import t
-
-from ui.text_shortcuts import install_text_shortcuts
+from ui.shared_chapter_editor import build_chapter_editor, create_selection_polish_button
 
 from utils import read_file, save_string_to_txt, clear_file_content
+from ui.theme import FONT_FAMILY, FONT_SIZES, SPACING
 
 
 def build_chapters_tab(self):
@@ -38,7 +37,9 @@ def build_chapters_tab(self):
 
     top_frame.columnconfigure(3, weight=0)
 
-    top_frame.columnconfigure(4, weight=1)
+    top_frame.columnconfigure(4, weight=0)
+    top_frame.columnconfigure(5, weight=0)
+    top_frame.columnconfigure(6, weight=1)
 
     prev_btn = ctk.CTkButton(
         top_frame,
@@ -79,6 +80,12 @@ def build_chapters_tab(self):
 
     save_btn.grid(row=0, column=3, padx=5, pady=5, sticky="w")
 
+    create_selection_polish_button(
+        self,
+        top_frame,
+        widget_getter=lambda: self.chapter_view_text,
+    ).grid(row=0, column=4, padx=5, pady=5, sticky="w")
+
     refresh_btn = ctk.CTkButton(
         top_frame,
         text=t("刷新章节列表"),
@@ -86,7 +93,7 @@ def build_chapters_tab(self):
         font=("Microsoft YaHei", 12),
     )
 
-    refresh_btn.grid(row=0, column=6, padx=5, pady=5, sticky="e")
+    refresh_btn.grid(row=0, column=7, padx=5, pady=5, sticky="e")
 
     # 向量库清空/重建按钮（与主界面一致的逻辑，文案由主窗口统一刷新）
     try:
@@ -103,7 +110,7 @@ def build_chapters_tab(self):
     # 放在右侧
     try:
         self.btn_clear_vectorstore_chapters.grid(
-            row=0, column=7, padx=(5, 5), pady=5, sticky="e"
+            row=0, column=8, padx=(5, 5), pady=5, sticky="e"
         )
     except Exception:
         pass
@@ -114,10 +121,12 @@ def build_chapters_tab(self):
         pass
 
     self.chapters_word_count_label = ctk.CTkLabel(
-        top_frame, text=t("字数："), font=("Microsoft YaHei", 12)
+        top_frame,
+        text=t("本章内容（可编辑） 字数：0"),
+        font=(FONT_FAMILY, FONT_SIZES["md"]),
     )
 
-    self.chapters_word_count_label.grid(row=0, column=4, padx=(0, 10), sticky="e")
+    self.chapters_word_count_label.grid(row=0, column=6, padx=(0, 10), sticky="e")
     # 已定稿提示（章节管理）
     try:
         self.chapters_finalized_label
@@ -131,29 +140,18 @@ def build_chapters_tab(self):
         row=0, column=5, padx=(10, 0), pady=5, sticky="w"
     )
 
-    self.chapter_view_text = ctk.CTkTextbox(
-        self.chapters_view_tab, wrap="word", font=("Microsoft YaHei", 12)
-    )
-
-    install_text_shortcuts(self.chapter_view_text)
-
-    def update_word_count(event=None):
-        text = self.chapter_view_text.get("0.0", "end-1c")
-
-        text_length = len(text)
-
-        self.chapters_word_count_label.configure(
-            text=t("字数：{n}").format(n=text_length)
-        )
-
-    self.chapter_view_text.bind("<KeyRelease>", update_word_count)
-
-    self.chapter_view_text.bind("<ButtonRelease>", update_word_count)
-
-    TextWidgetContextMenu(self.chapter_view_text)
-
-    self.chapter_view_text.grid(
-        row=1, column=0, sticky="nsew", padx=5, pady=5, columnspan=6
+    build_chapter_editor(
+        self,
+        parent=self.chapters_view_tab,
+        attribute_name="chapter_view_text",
+        label_widget=self.chapters_word_count_label,
+        label_template=t("本章内容（可编辑） 字数：{count}"),
+        save_handler=self.save_current_chapter,
+        grid_row=1,
+        grid_column=0,
+        columnspan=6,
+        padx=SPACING["sm"],
+        pady=(0, SPACING["sm"]),
     )
 
     self.chapters_list = []

@@ -3,6 +3,7 @@
 from tkinter import messagebox
 import uuid
 import datetime
+import threading
 
 import customtkinter as ctk
 from config_manager import load_config, save_config
@@ -458,35 +459,46 @@ def build_ai_config_tab(self):
     # OpenCode 模型列表刷新按钮
     def _refresh_opencode_models():
         try:
-            from llm_adapters import list_opencode_models
+            cached = list(getattr(self, "_opencode_models", []) or [])
+            if cached:
+                try:
+                    sync_model_control()
+                except Exception:
+                    pass
+            self.safe_log("OpenCode 模型列表后台刷新中...")
 
-            base = self.base_url_var.get().strip()
-            api_key = self.api_key_var.get().strip()
-            ids = list_opencode_models(base, api_key)
-            # 更新缓存
-            self._opencode_models = list(ids) if ids else []
-            if self._opencode_models:
+            def _task():
                 try:
-                    self.safe_log(
-                        "OpenCode 模型列表已刷新: "
-                        + ", ".join(self._opencode_models[:6])
-                        + (" ..." if len(self._opencode_models) > 6 else "")
-                    )
-                except Exception:
-                    pass
-                cur = (self.model_name_var.get() or "").strip()
-                if not cur or cur not in self._opencode_models:
-                    self.model_name_var.set(self._opencode_models[0])
-                try:
-                    self.safe_log(
-                        "OpenCode 模型列表已刷新: "
-                        + ", ".join(self._opencode_models[:6])
-                        + (" ..." if len(self._opencode_models) > 6 else "")
-                    )
-                except Exception:
-                    pass
-            # 同步控件，以便立刻使用缓存
-            sync_model_control()
+                    from llm_adapters import refresh_opencode_models
+
+                    base = self.base_url_var.get().strip()
+                    api_key = self.api_key_var.get().strip()
+                    ids = refresh_opencode_models(base, api_key)
+                    self._opencode_models = list(ids) if ids else list(cached)
+                    if self._opencode_models:
+                        def _apply():
+                            try:
+                                cur = (self.model_name_var.get() or "").strip()
+                                if not cur or cur not in self._opencode_models:
+                                    self.model_name_var.set(self._opencode_models[0])
+                                sync_model_control()
+                                self.safe_log(
+                                    "OpenCode 模型列表已刷新: "
+                                    + ", ".join(self._opencode_models[:6])
+                                    + (" ..." if len(self._opencode_models) > 6 else "")
+                                )
+                            except Exception:
+                                pass
+                        self.master.after(0, _apply)
+                except Exception as e:
+                    def _report():
+                        try:
+                            self.safe_log("刷新 OpenCode 模型列表失败: " + str(e))
+                        except Exception:
+                            pass
+                    self.master.after(0, _report)
+
+            threading.Thread(target=_task, daemon=True).start()
         except Exception as e:
             try:
                 self.safe_log("刷新 OpenCode 模型列表失败: " + str(e))
@@ -496,38 +508,55 @@ def build_ai_config_tab(self):
     # Agent 选择（OpenCode 专用）
     def _refresh_opencode_agents():
         try:
-            from llm_adapters import list_opencode_agents
+            cached = list(getattr(self, "_opencode_agents", []) or [])
+            if cached:
+                try:
+                    sync_agent_control()
+                except Exception:
+                    pass
+            self.safe_log("OpenCode Agent 列表后台刷新中...")
 
-            agents = list_opencode_agents()
-            # 更新缓存
-            self._opencode_agents = list(agents) if agents else []
-            if self._opencode_agents:
+            def _task():
                 try:
-                    self.opencode_agent_menu.configure(values=self._opencode_agents)
-                except Exception:
-                    pass
-                cur = (
-                    self.opencode_agent_var.get()
-                    or os.environ.get("OPENCODE_AGENT", "")
-                ).strip()
-                if not cur or cur not in self._opencode_agents:
-                    self.opencode_agent_var.set(self._opencode_agents[0])
-                try:
-                    self.safe_log(
-                        "OpenCode Agent 列表已刷新: "
-                        + ", ".join(self._opencode_agents[:6])
-                        + (" ..." if len(self._opencode_agents) > 6 else "")
-                    )
-                except Exception:
-                    pass
-            # 同步控件，以便立刻使用缓存
-            sync_agent_control()
+                    from llm_adapters import refresh_opencode_agents
+
+                    agents = refresh_opencode_agents()
+                    self._opencode_agents = list(agents) if agents else list(cached)
+
+                    def _apply():
+                        try:
+                            if self._opencode_agents:
+                                cur = (
+                                    self.opencode_agent_var.get()
+                                    or os.environ.get("OPENCODE_AGENT", "")
+                                ).strip()
+                                if not cur or cur not in self._opencode_agents:
+                                    self.opencode_agent_var.set(self._opencode_agents[0])
+                            sync_agent_control()
+                            if self._opencode_agents:
+                                self.safe_log(
+                                    "OpenCode Agent 列表已刷新: "
+                                    + ", ".join(self._opencode_agents[:6])
+                                    + (" ..." if len(self._opencode_agents) > 6 else "")
+                                )
+                        except Exception:
+                            pass
+
+                    self.master.after(0, _apply)
+                except Exception as e:
+                    def _report():
+                        try:
+                            self.safe_log("刷新 OpenCode Agent 失败: " + str(e))
+                        except Exception:
+                            pass
+                    self.master.after(0, _report)
+
+            threading.Thread(target=_task, daemon=True).start()
         except Exception as e:
             try:
                 self.safe_log("刷新 OpenCode Agent 失败: " + str(e))
             except Exception:
                 pass
-            sync_agent_control()
 
     def on_interface_format_changed(new_value):
         try:

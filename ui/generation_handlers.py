@@ -19,6 +19,8 @@ from novel_generator import (
     build_chapter_prompt
 )
 from consistency_checker import check_consistency
+from ui.parallel_tasks import run_parallel_indexed_tasks
+from ui.running_button import TaskButtonController
 
 def generate_novel_architecture_ui(self):
     filepath = self.filepath_var.get().strip()
@@ -128,9 +130,41 @@ def generate_chapter_draft_ui(self):
         messagebox.showwarning("警告", "请先配置保存文件路径。")
         return
 
+    stop_state = {"requested": False}
+
+    controller = getattr(self, "_generate_chapter_button_controller", None)
+    if controller and controller.running:
+        return
+
+    def _confirm_stop():
+        return messagebox.askyesno("二次确认", "确定要停止当前草稿生成任务吗？")
+
+    def _request_stop():
+        stop_state["requested"] = True
+        self.safe_log("已请求停止草稿生成任务。当前步骤完成后会尽快停止。")
+
+    if controller is None and hasattr(self, "btn_generate_chapter"):
+        controller = TaskButtonController(
+            button=self.btn_generate_chapter,
+            idle_text="Step3. 生成草稿",
+            running_text="生成草稿中…",
+            stop_text="停止生成",
+            confirm_stop=_confirm_stop,
+            on_request_stop=_request_stop,
+            idle_command=self.generate_chapter_draft_ui,
+        )
+        self._generate_chapter_button_controller = controller
+    elif controller is not None:
+        controller.confirm_stop = _confirm_stop
+        controller.on_request_stop = _request_stop
+
+    if controller is not None:
+        controller.start()
+
     def task():
-        self.disable_button_safe(self.btn_generate_chapter)
         try:
+            if stop_state["requested"]:
+                return
 
             interface_format = self.loaded_config["llm_configs"][self.prompt_draft_llm_var.get()]["interface_format"]
             api_key = self.loaded_config["llm_configs"][self.prompt_draft_llm_var.get()]["api_key"]
@@ -157,6 +191,9 @@ def generate_chapter_draft_ui(self):
             embedding_k = self.safe_get_int(self.embedding_retrieval_k_var, 4)
 
             self.safe_log(f"生成第{chap_num}章草稿：准备生成请求提示词...")
+            if stop_state["requested"]:
+                self.safe_log("草稿生成已停止。")
+                return
 
             # 调用新添加的 build_chapter_prompt 函数构造初始提示词
             prompt_text = build_chapter_prompt(
@@ -271,6 +308,9 @@ def generate_chapter_draft_ui(self):
                 dialog.grab_set()
             self.master.after(0, create_dialog)
             event.wait()  # 等待用户操作完成
+            if stop_state["requested"]:
+                self.safe_log("草稿生成已停止。")
+                return
             edited_prompt = result["prompt"]
             if edited_prompt is None:
                 self.safe_log("❌ 用户取消了草稿生成请求。")
@@ -289,58 +329,68 @@ def generate_chapter_draft_ui(self):
                 chapters_dir = os.path.join(filepath, "chapters")
                 drafts_dir = os.path.join(chapters_dir, "_drafts")
                 os.makedirs(drafts_dir, exist_ok=True)
-                results = {}
-                threads = []
-                def worker(k:int):
+                def _update_progress(done, total):
+                    ctl = getattr(self, "_generate_chapter_button_controller", None)
+                    if ctl is None:
+                        return
                     try:
-                        self.safe_log(f"[Variant {k}] 启动")
-                        target_path = os.path.join(drafts_dir, f"chapter_{chap_num}_{k}.txt")
-                        from novel_generator.chapter import generate_chapter_draft as _gen
-                        self.safe_log(f"[Variant {k}] 调用LLM...")
-                        text = _gen(
-                            api_key=api_key,
-                            base_url=base_url,
-                            model_name=model_name,
-                            filepath=filepath,
-                            novel_number=chap_num,
-                            word_number=word_number,
-                            temperature=temperature,
-                            user_guidance=user_guidance,
-                            characters_involved=char_inv,
-                            key_items=key_items,
-                            scene_location=scene_loc,
-                            time_constraint=time_constr,
-                            embedding_api_key=embedding_api_key,
-                            embedding_url=embedding_url,
-                            embedding_interface_format=embedding_interface_format,
-                            embedding_model_name=embedding_model_name,
-                            embedding_retrieval_k=embedding_k,
-                            interface_format=interface_format,
-                            max_tokens=max_tokens,
-                            timeout=timeout_val,
-                            custom_prompt_text=edited_prompt,
-                            target_file=target_path
-                        )
-                        results[k] = bool(text and len(text.strip())>0)
-                        if results[k]:
-                            self.safe_log(f"OK Variant {k} -> {target_path}")
-                        else:
-                            self.safe_log(f"FAIL Variant {k} empty")
-                    except Exception as e:
-                        results[k] = False
-                        self.safe_log(f"FAIL Variant {k} failed: {str(e)}")
-                for k in range(1, variant_count+1):
+                        self.master.after(0, lambda d=done, t=total: ctl.set_progress(d, t))
+                    except Exception:
+                        ctl.set_progress(done, total)
+
+                def worker(k: int):
+                    if stop_state["requested"]:
+                        self.safe_log(f"[Variant {k}] 已停止，跳过生成。")
+                        return False
+                    self.safe_log(f"[Variant {k}] 启动")
+                    target_path = os.path.join(drafts_dir, f"chapter_{chap_num}_{k}.txt")
+                    from novel_generator.chapter import generate_chapter_draft as _gen
+                    self.safe_log(f"[Variant {k}] 调用LLM...")
+                    text = _gen(
+                        api_key=api_key,
+                        base_url=base_url,
+                        model_name=model_name,
+                        filepath=filepath,
+                        novel_number=chap_num,
+                        word_number=word_number,
+                        temperature=temperature,
+                        user_guidance=user_guidance,
+                        characters_involved=char_inv,
+                        key_items=key_items,
+                        scene_location=scene_loc,
+                        time_constraint=time_constr,
+                        embedding_api_key=embedding_api_key,
+                        embedding_url=embedding_url,
+                        embedding_interface_format=embedding_interface_format,
+                        embedding_model_name=embedding_model_name,
+                        embedding_retrieval_k=embedding_k,
+                        interface_format=interface_format,
+                        max_tokens=max_tokens,
+                        timeout=timeout_val,
+                        custom_prompt_text=edited_prompt,
+                        target_file=target_path
+                    )
+                    ok = bool(text and len(text.strip()) > 0)
+                    if ok:
+                        self.safe_log(f"OK Variant {k} -> {target_path}")
+                    else:
+                        self.safe_log(f"FAIL Variant {k} empty")
+                    return ok
+
+                for k in range(1, variant_count + 1):
                     self.safe_log(f"准备启动线程 {k}/{variant_count}")
-                    t = threading.Thread(target=worker, args=(k,), daemon=True)
-                    threads.append(t)
-                    t.start()
-                    self.safe_log(f"线程 {k} 已启动")
+                results = run_parallel_indexed_tasks(
+                    task_count=variant_count,
+                    worker_fn=worker,
+                    progress_cb=_update_progress,
+                    stop_requested=lambda: stop_state["requested"],
+                    log_cb=self.safe_log,
+                    task_name="草稿并发任务",
+                )
                 self.safe_log("等待所有变体线程完成...")
-                for t in threads:
-                    t.join()
                 self.safe_log("所有变体线程已结束")
                 try:
-                    ok_count = sum(1 for v in results.values() if v)
+                    ok_count = sum(1 for v in results.values() if v is True)
                     self.safe_log(f"并发完成：成功 {ok_count}/{variant_count}")
                 except Exception:
                     pass
@@ -397,7 +447,9 @@ def generate_chapter_draft_ui(self):
         except Exception:
             self.handle_exception("生成章节草稿时出错")
         finally:
-            self.enable_button_safe(self.btn_generate_chapter)
+            controller = getattr(self, "_generate_chapter_button_controller", None)
+            if controller is not None:
+                self.master.after(0, controller.finish)
     threading.Thread(target=task, daemon=True).start()
 
 def finalize_chapter_ui(self):

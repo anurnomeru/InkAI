@@ -76,6 +76,11 @@ from ui.directory_tab import (
     load_chapter_blueprint,
     save_chapter_blueprint,
 )
+from ui.style_tab import (
+    build_style_tab,
+    load_style_guidance,
+    save_style_guidance,
+)
 
 from ui.character_tab import (
     build_character_tab,
@@ -377,6 +382,7 @@ class NovelGeneratorGUI:
             # 4) 其他功能页
             steps.append(lambda: build_setting_tab(self))
             steps.append(lambda: build_directory_tab(self))
+            steps.append(lambda: build_style_tab(self))
             steps.append(lambda: build_character_tab(self))
             steps.append(lambda: build_summary_tab(self))
             steps.append(lambda: build_chapters_tab(self))
@@ -966,6 +972,10 @@ class NovelGeneratorGUI:
     load_chapter_blueprint = load_chapter_blueprint
 
     save_chapter_blueprint = save_chapter_blueprint
+
+    load_style_guidance = load_style_guidance
+
+    save_style_guidance = save_style_guidance
 
     load_character_state = load_character_state
 
