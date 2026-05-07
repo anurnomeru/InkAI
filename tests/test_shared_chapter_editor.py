@@ -284,4 +284,35 @@ def test_create_selection_polish_button_installs_running_controller(monkeypatch)
     )
 
     assert button is created[0]
-    assert hasattr(fake_self, "_selection_polish_button_controller")
+    assert hasattr(fake_self, "_selection_polish_button_controllers")
+    assert len(fake_self._selection_polish_button_controllers) == 1
+
+
+def test_create_selection_polish_button_keeps_independent_controllers(monkeypatch):
+    created = []
+
+    def fake_make_button(parent, **kwargs):
+        btn = FakeFrame(parent, **kwargs)
+        btn.command = kwargs.get("command")
+        created.append(btn)
+        return btn
+
+    monkeypatch.setattr(shared_editor, "make_button", fake_make_button)
+
+    fake_self = SimpleNamespace()
+    btn1 = shared_editor.create_selection_polish_button(
+        fake_self,
+        parent=FakeFrame(),
+        widget_getter=lambda: FakeTextbox(),
+    )
+    btn2 = shared_editor.create_selection_polish_button(
+        fake_self,
+        parent=FakeFrame(),
+        widget_getter=lambda: FakeTextbox(),
+    )
+
+    assert btn1 is created[0]
+    assert btn2 is created[1]
+    assert len(fake_self._selection_polish_button_controllers) == 2
+    assert fake_self._selection_polish_button_controllers[0].button is btn1
+    assert fake_self._selection_polish_button_controllers[1].button is btn2

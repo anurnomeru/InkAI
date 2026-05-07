@@ -408,10 +408,9 @@ def _open_variant_choice_dialog(self, variants: list[str], on_done):
     self.master.after(0, lambda: _build_polish_dialog(self.master, variants, _on_choose))
 
 
-def trigger_selection_polish(self, widget):
+def trigger_selection_polish(self, widget, controller=None):
     stop_state = {"requested": False}
 
-    controller = getattr(self, "_selection_polish_button_controller", None)
     if controller and controller.running:
         return
 
@@ -469,7 +468,6 @@ def trigger_selection_polish(self, widget):
             if hasattr(self, "safe_log"):
                 self.safe_log(f"润色失败：{str(e)}")
         finally:
-            controller = getattr(self, "_selection_polish_button_controller", None)
             if controller is not None:
                 try:
                     self.master.after(0, controller.finish)
@@ -480,7 +478,16 @@ def trigger_selection_polish(self, widget):
 
 
 def create_selection_polish_button(self, parent, widget_getter):
-    idle_command = lambda: trigger_selection_polish(self, widget_getter())
+    button = None
+    controller = None
+
+    def _run():
+        widget = widget_getter()
+        if widget is not None:
+            cache_widget_selection(widget)
+        trigger_selection_polish(self, widget, controller=controller)
+
+    idle_command = _run
     button = make_button(
         parent,
         text="润色选中",
@@ -488,7 +495,7 @@ def create_selection_polish_button(self, parent, widget_getter):
         kind="secondary",
         font=(FONT_FAMILY, FONT_SIZES["md"]),
     )
-    self._selection_polish_button_controller = TaskButtonController(
+    controller = TaskButtonController(
         button=button,
         idle_text="润色选中",
         running_text="润色中…",
@@ -497,6 +504,9 @@ def create_selection_polish_button(self, parent, widget_getter):
         on_request_stop=lambda: None,
         idle_command=idle_command,
     )
+    if not hasattr(self, "_selection_polish_button_controllers"):
+        self._selection_polish_button_controllers = []
+    self._selection_polish_button_controllers.append(controller)
     return button
 
 
